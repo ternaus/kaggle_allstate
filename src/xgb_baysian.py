@@ -13,6 +13,7 @@ from sklearn.metrics import mean_absolute_error
 from bayes_opt import BayesianOptimization
 from tqdm import tqdm
 import numpy as np
+from scipy.stats import skew, boxcox
 
 
 def evalerror(preds, dtrain):
@@ -45,13 +46,27 @@ def xgb_evaluate(min_child_weight,
 
 def prepare_data():
     train = pd.read_csv('../data/train.csv')
+
+    y = np.log(train['loss'] + shift)
+
+    print train.info()
+    numerical_feats = train.dtypes[train.dtypes != "object"].index
+    # compute skew and do Box-Cox transformation
+    skewed_feats = train[numerical_feats].apply(lambda x: skew(x.dropna()))
+    print 'Skew in numeric features:'
+    print skewed_feats
+    # transform features with skew > 0.25 (this can be varied to find optimal value)
+    skewed_feats = skewed_feats[skewed_feats > 0.25]
+    skewed_feats = skewed_feats.index
+    for feats in tqdm(skewed_feats):
+        train[feats] = train[feats] + 1
+        train[feats], lam = boxcox(train[feats])
+
     categorical_columns = train.select_dtypes(include=['object']).columns
 
     for column in tqdm(categorical_columns):
         le = LabelEncoder()
         train[column] = le.fit_transform(train[column])
-
-    y = np.log(train['loss'] + shift)
 
     X = train.drop(['loss', 'id'], 1)
     xgtrain = xgb.DMatrix(X, label=y)
