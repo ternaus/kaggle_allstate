@@ -12,6 +12,12 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_absolute_error
 from bayes_opt import BayesianOptimization
 from tqdm import tqdm
+import numpy as np
+
+
+def evalerror(preds, dtrain):
+    labels = dtrain.get_label()
+    return 'mae', mean_absolute_error(np.exp(preds), np.exp(labels))
 
 
 def xgb_evaluate(min_child_weight,
@@ -31,20 +37,21 @@ def xgb_evaluate(min_child_weight,
 
     cv_result = xgb.cv(params, xgtrain, num_boost_round=num_rounds, nfold=5,
              seed=random_state,
+             feval=evalerror,
              callbacks=[xgb.callback.early_stop(50)])
 
     return -cv_result['test-mae-mean'].values[-1]
 
 
 def prepare_data():
-    train = pd.read_csv('../input/train.csv')
+    train = pd.read_csv('../data/train.csv')
     categorical_columns = train.select_dtypes(include=['object']).columns
 
     for column in tqdm(categorical_columns):
         le = LabelEncoder()
         train[column] = le.fit_transform(train[column])
 
-    y = train['loss']
+    y = np.log(train['loss'] + shift)
 
     X = train.drop(['loss', 'id'], 1)
     xgtrain = xgb.DMatrix(X, label=y)
@@ -53,12 +60,14 @@ def prepare_data():
 
 
 if __name__ == '__main__':
-    xgtrain = prepare_data()
-
-    num_rounds = 30
+    num_rounds = 3000
     random_state = 2016
     num_iter = 25
     init_points = 5
+    shift = 200
+
+    xgtrain = prepare_data()
+
     params = {
         'eta': 0.1,
         'silent': 1,
