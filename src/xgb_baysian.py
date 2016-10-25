@@ -7,14 +7,19 @@ on default features for https://www.kaggle.com/c/allstate-claims-severity
 __author__ = "Vladimir Iglovikov"
 
 import pandas as pd
-import xgboost as xgb
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_absolute_error
 from bayes_opt import BayesianOptimization
 from tqdm import tqdm
 import numpy as np
 from scipy.stats import skew, boxcox
+import sys
+import json
+import os
 
+sys.path += ['/home/vladimir/packages/xgboost/python-package']
+
+import xgboost as xgb
 
 def evalerror(preds, dtrain):
     labels = dtrain.get_label()
@@ -34,7 +39,6 @@ def xgb_evaluate(min_child_weight,
     params['subsample'] = max(min(subsample, 1), 0)
     params['gamma'] = max(gamma, 0)
     params['alpha'] = max(alpha, 0)
-
 
     cv_result = xgb.cv(params, xgtrain, num_boost_round=num_rounds, nfold=5,
              seed=random_state,
@@ -75,10 +79,10 @@ def prepare_data():
 
 
 if __name__ == '__main__':
-    num_rounds = 3000
+    num_rounds = 5000
     random_state = 2016
-    num_iter = 25
-    init_points = 5
+    num_iter = 10
+    init_points = 10
     shift = 200
 
     xgtrain = prepare_data()
@@ -91,13 +95,26 @@ if __name__ == '__main__':
         'seed': random_state
     }
 
-    xgbBO = BayesianOptimization(xgb_evaluate, {'min_child_weight': (1, 20),
+    xgbBO = BayesianOptimization(xgb_evaluate, {'min_child_weight': (2, 20),
                                                 'colsample_bytree': (0.5, 1),
                                                 'max_depth': (5, 15),
-                                                'subsample': (0.5, 1),
-                                                'gamma': (0, 10),
+                                                'subsample': (0.7, 1),
+                                                'gamma': (0.05, 10),
                                                 'alpha': (0, 10),
                                                 })
 
     xgbBO.maximize(init_points=init_points, n_iter=num_iter)
+
+    # Save results
+    param_cache_path = 'params'
+    try:
+        os.mkdir(param_cache_path)
+    except:
+        pass
+
+    file_name = open(str(num_rounds) + '_' + str(params['eta']) + '.json', 'w')
+
+    json.dump(xgbBO.res, file_name)
+
+    file_name.close()
 
