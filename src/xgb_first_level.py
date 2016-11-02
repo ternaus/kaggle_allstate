@@ -73,7 +73,7 @@ xgb_params = {
     # 'base_score': 2,
     'verbose_eval': 1,
     'seed': RANDOM_STATE,
-    'nrounds': int(5903/0.8)
+    'nrounds': int(5903 / 0.8)
 }
 
 n_folds = 5
@@ -122,11 +122,15 @@ def get_oof(clf):
 xg = XgbWrapper(seed=RANDOM_STATE, params=xgb_params)
 xg_oof_train, xg_oof_test = get_oof(xg)
 
+print
+print xg_oof_train[:, 0].shape, train.shape
+print xg_oof_train[:, 0]
+
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
 
-oof_train = pd.DataFrame({'id': train['id'], 'xgb': np.exp(xg_oof_train) - shift})
+oof_train = pd.DataFrame({'id': train['id'], 'xgb': (np.exp(xg_oof_train) - shift)[:, 0]})
 oof_train.to_csv('oof/xgb_train.csv', index=False)
 
-oof_test = pd.DataFrame({'id': test['id'], 'xgb': np.exp(xg_oof_test) - shift})
+oof_test = pd.DataFrame({'id': test['id'], 'xgb': (np.exp(xg_oof_test) - shift)[:, 0]})
 oof_test.to_csv('oof/xgb_test.csv', index=False)
 
