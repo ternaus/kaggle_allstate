@@ -128,9 +128,9 @@ print xg_oof_train[:, 0]
 
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
 
-oof_train = pd.DataFrame({'id': train['id'], 'xgb': (np.exp(xg_oof_train) - shift)[:, 0]})
+oof_train = pd.DataFrame({'id': train['id'], 'loss': (np.exp(xg_oof_train) - shift)[:, 0]})
 oof_train.to_csv('oof/xgb_train.csv', index=False)
 
-oof_test = pd.DataFrame({'id': test['id'], 'xgb': (np.exp(xg_oof_test) - shift)[:, 0]})
+oof_test = pd.DataFrame({'id': test['id'], 'loss': (np.exp(xg_oof_test) - shift)[:, 0]})
 oof_test.to_csv('oof/xgb_test.csv', index=False)
 
