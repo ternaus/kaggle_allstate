@@ -129,18 +129,30 @@ print('Dim test', xtest.shape)
 
 del(xtr_te, sparse_data, tmp)
 
+# def nn_model():
+#     model = Sequential()
+#     model.add(Dense(400, init='he_normal', activation='elu', input_dim=xtrain.shape[1]))
+#     model.add(Dropout(0.4))
+#     # model.add(BatchNormalization())
+#     model.add(Dense(200, init='he_normal', activation='elu'))
+#     model.add(Dropout(0.4))
+#     # model.add(BatchNormalization())
+#     model.add(Dense(50, init='he_normal', activation='elu'))
+#     model.add(Dropout(0.2))
+#     model.add(Dense(1))
+#     # model.compile(loss='mae', optimizer='nadam')
+#     return(model)
+
 def nn_model():
     model = Sequential()
-    model.add(Dense(400, init='he_normal', activation='elu', input_dim=xtrain.shape[1]))
+    model.add(Dense(400, input_dim = xtrain.shape[1], init='he_normal', activation='elu'))
+    # model.add(PReLU())
     model.add(Dropout(0.4))
-    # model.add(BatchNormalization())
     model.add(Dense(200, init='he_normal', activation='elu'))
-    model.add(Dropout(0.4))
-    # model.add(BatchNormalization())
-    model.add(Dense(50, init='he_normal', activation='elu'))
+    # model.add(PReLU())
     model.add(Dropout(0.2))
-    model.add(Dense(1))
-    # model.compile(loss='mae', optimizer='nadam')
+    model.add(Dense(1, init='he_normal'))
+    # model.compile(loss='mae', optimizer='adadelta')
     return(model)
 
 
@@ -150,7 +162,7 @@ folds = KFold(len(y), n_folds=nfolds, shuffle=True, random_state=2016)
 
 ## train models
 i = 0
-nbags = 1
+nbags = 5
 nepochs = 10
 batch_size = 2**7
 pred_oob = np.zeros(xtrain.shape[0])
