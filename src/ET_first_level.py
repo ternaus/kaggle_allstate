@@ -57,7 +57,7 @@ et_params = {
     'n_jobs': -1,
     'n_estimators': 1000,
     'max_features': 0.5,
-    'max_depth': 12,
+    'max_depth': 28,
     'min_samples_leaf': 2,
 }
 
