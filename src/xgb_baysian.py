@@ -81,8 +81,8 @@ def prepare_data():
 if __name__ == '__main__':
     num_rounds = 5000
     random_state = 2016
-    num_iter = 10
-    init_points = 10
+    num_iter = 100
+    init_points = 100
     shift = 200
 
     xgtrain = prepare_data()
