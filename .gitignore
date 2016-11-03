@@ -87,3 +87,23 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+.idea/kaggle_allstate.iml
+
+*.xml
+
+3563906.zip
+
+data/test.csv.zip
+
+data/test.csv
+
+data/train.csv
+
+data/train.csv.zip
+
+data/sample_submission.csv
+
+.DS_Store
+
+data/sample_submission.csv.zip
