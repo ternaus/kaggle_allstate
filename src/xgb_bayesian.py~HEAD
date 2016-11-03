@@ -13,13 +13,9 @@ from bayes_opt import BayesianOptimization
 from tqdm import tqdm
 import numpy as np
 from scipy.stats import skew, boxcox
-import sys
-import json
 import os
-
-sys.path += ['/home/vladimir/packages/xgboost/python-package']
-
 import xgboost as xgb
+
 
 def evalerror(preds, dtrain):
     labels = dtrain.get_label()
@@ -41,9 +37,9 @@ def xgb_evaluate(min_child_weight,
     params['alpha'] = max(alpha, 0)
 
     cv_result = xgb.cv(params, xgtrain, num_boost_round=num_rounds, nfold=5,
-             seed=random_state,
-             feval=evalerror,
-             callbacks=[xgb.callback.early_stop(50)])
+                         seed=random_state,
+                         feval=evalerror,
+                         callbacks=[xgb.callback.early_stop(50)])
 
     return -cv_result['test-mae-mean'].values[-1]
 
@@ -63,7 +59,7 @@ def prepare_data():
     skewed_feats = skewed_feats[skewed_feats > 0.25]
     skewed_feats = skewed_feats.index
     for feats in tqdm(skewed_feats):
-        train[feats] = train[feats] + 1
+        train[feats] += 1
         train[feats], lam = boxcox(train[feats])
 
     categorical_columns = train.select_dtypes(include=['object']).columns
@@ -79,11 +75,11 @@ def prepare_data():
 
 
 if __name__ == '__main__':
-    num_rounds = 5000
+    num_rounds = 10000
     random_state = 2016
     num_iter = 100
     init_points = 100
-    shift = 200
+    shift = 0
 
     xgtrain = prepare_data()
 
@@ -95,13 +91,17 @@ if __name__ == '__main__':
         'seed': random_state
     }
 
-    xgbBO = BayesianOptimization(xgb_evaluate, {'min_child_weight': (2, 20),
-                                                'colsample_bytree': (0.5, 1),
-                                                'max_depth': (5, 15),
+    previous_points = pd.read_csv('params/parameters.csv')
+
+    xgbBO = BayesianOptimization(xgb_evaluate, {'min_child_weight': (1, 5),
+                                                'colsample_bytree': (0.3, 0.6),
+                                                'max_depth': (10, 15),
                                                 'subsample': (0.7, 1),
-                                                'gamma': (0.05, 10),
-                                                'alpha': (0, 10),
+                                                'gamma': (0, 3),
+                                                'alpha': (0, 3),
                                                 })
+
+    # xgbBO.initialize_df(previous_points)
 
     xgbBO.maximize(init_points=init_points, n_iter=num_iter)
 
@@ -112,9 +112,5 @@ if __name__ == '__main__':
     except:
         pass
 
-    file_name = open(str(num_rounds) + '_' + str(params['eta']) + '.json', 'w')
-
-    json.dump(xgbBO.res, file_name)
-
-    file_name.close()
-
+    file_name = str(num_rounds) + '_' + str(params['eta']) + '.csv'
+    xgbBO.points_to_csv(file_name)
