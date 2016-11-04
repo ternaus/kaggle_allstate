@@ -67,7 +67,8 @@ test = pd.read_csv('../data/test.csv')
 test['loss'] = np.nan
 
 ## response and IDs
-shift = 200
+# shift = 200
+shift = 0
 y = np.log(train['loss'].values + shift)
 
 y_mean = y.mean()
@@ -79,7 +80,7 @@ id_test = test['id'].values
 ## stack train test
 ntrain = train.shape[0]
 joined = pd.concat((train, test), axis=0)
-joined = joined.drop(['cat110', 'cat116'], 1)
+# joined = joined.drop(['cat110', 'cat116'], 1)
 
 ## Preprocessing and transforming to sparse data
 
@@ -149,10 +150,11 @@ def nn_model():
     # model.add(PReLU())
     model.add(Dropout(0.4))
     model.add(Dense(200, init='he_normal', activation='elu'))
-    # model.add(PReLU())
+    model.add(Dropout(0.4))
+    model.add(Dense(50, init='he_normal', activation='elu'))
+    model.add(PReLU())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))
-    # model.compile(loss='mae', optimizer='adadelta')
     return(model)
 
 
@@ -163,12 +165,12 @@ folds = KFold(len(y), n_folds=nfolds, shuffle=True, random_state=2016)
 ## train models
 i = 0
 nbags = 5
-nepochs = 10
+nepochs = 20
 batch_size = 2**7
 pred_oob = np.zeros(xtrain.shape[0])
 pred_test = np.zeros(xtest.shape[0])
 
-for (inTr, inTe) in folds:
+for i, (inTr, inTe) in enumerate(folds):
     xtr = xtrain[inTr]
     ytr = y[inTr]
     xte = xtrain[inTe]
@@ -176,7 +178,8 @@ for (inTr, inTe) in folds:
     pred = np.zeros(xte.shape[0])
     for j in range(nbags):
         model = nn_model()
-        model.compile(loss='mse', optimizer=Nadam(1e-4), metrics=[f_eval])
+        # model.compile(loss='mse', optimizer=Nadam(1e-5), metrics=[f_eval])
+        model.compile(loss='mae', optimizer='adadelta', metrics=[f_eval])
         fit = model.fit_generator(generator=batch_generator(xtr, ytr, batch_size, True),
                                   nb_epoch=nepochs,
                                   samples_per_epoch=10000 * batch_size,
@@ -187,7 +190,6 @@ for (inTr, inTe) in folds:
     pred /= nbags
     pred_oob[inTe] = pred
     score = mean_absolute_error(np.exp(yte + y_mean), np.exp(pred + y_mean))
-    i += 1
     print('Fold ', i, '- MAE:', score)
 
 print('Total - MAE:', mean_absolute_error(np.exp(y + y_mean), np.exp(pred_oob + y_mean)))
