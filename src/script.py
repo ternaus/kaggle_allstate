@@ -6,6 +6,8 @@ Title: Neural network (Keras) with sparse data
 
 ## import libraries
 import numpy as np
+from keras.constraints import maxnorm
+
 np.random.seed(123)
 
 import pandas as pd
@@ -146,16 +148,19 @@ del(xtr_te, sparse_data, tmp)
 
 def nn_model():
     model = Sequential()
-    model.add(Dense(400, input_dim = xtrain.shape[1], init='he_normal', activation='elu'))
+    model.add(Dense(400, input_dim=xtrain.shape[1], init='he_normal', activation='elu'))
     # model.add(PReLU())
     model.add(Dropout(0.4))
+    # model.add(BatchNormalization())
     model.add(Dense(200, init='he_normal', activation='elu'))
+    # model.add(PReLU())
     model.add(Dropout(0.4))
+    # model.add(BatchNormalization())
     model.add(Dense(50, init='he_normal', activation='elu'))
-    model.add(PReLU())
-    model.add(Dropout(0.2))
+    # model.add(PReLU())
+    model.add(Dropout(0.3))
     model.add(Dense(1, init='he_normal'))
-    return(model)
+    return model
 
 
 ## cv-folds
