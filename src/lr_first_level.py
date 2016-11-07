@@ -1,9 +1,8 @@
+from __future__ import division
 import pandas as pd
+from sklearn.ensemble import ExtraTreesRegressor
 
-import sys
 
-sys.path += ['/home/vladimir/packages/xgboost/python-package']
-import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from pylab import *
@@ -12,20 +11,6 @@ train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
 test['loss'] = np.nan
 joined = pd.concat([train, test])
-
-
-def evalerror(preds, dtrain):
-    labels = dtrain.get_label()
-    return 'mae', mean_absolute_error(np.exp(preds), np.exp(labels))
-
-
-def logregobj(preds, dtrain):
-    labels = dtrain.get_label()
-    con = 2
-    x =preds-labels
-    grad =con * x / (np.abs(x) + con)
-    hess =con**2 / (np.abs(x) + con)**2
-    return grad, hess
 
 
 for column in list(train.select_dtypes(include=['object']).columns):
@@ -61,20 +46,6 @@ y_train = np.log(train['loss'] + shift).values
 
 num_rounds = 300000
 RANDOM_STATE = 2016
-xgb_params = {
-    'min_child_weight': 1,
-    'eta': 0.01,
-    'colsample_bytree': 0.5,
-    'max_depth': 13,
-    'subsample': 0.8,
-    'alpha': 5,
-    'gamma': 1,
-    'silent': 1,
-    # 'base_score': 2,
-    'verbose_eval': 1,
-    'seed': RANDOM_STATE,
-    'nrounds': 10000
-}
 
 n_folds = 5
 num_train = len(y_train)
@@ -82,19 +53,24 @@ num_test = test.shape[0]
 
 kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 
+et_params = {
+    'n_jobs': -1,
+    'n_estimators': 1000,
+    'max_features': 0.5,
+    'max_depth': 28,
+    'min_samples_leaf': 2,
+}
 
-class XgbWrapper(object):
-    def __init__(self, seed=0, params=None):
-        self.param = params
-        self.param['seed'] = seed
-        self.nrounds = params.pop('nrounds', 250)
+class SklearnWrapper(object):
+    def __init__(self, clf, seed=0, params=None):
+        params['random_state'] = seed
+        self.clf = clf(**params)
 
     def train(self, x_train, y_train):
-        dtrain = xgb.DMatrix(x_train, label=y_train)
-        self.gbdt = xgb.train(self.param, dtrain, self.nrounds, feval=evalerror, obj=logregobj)
+        self.clf.fit(x_train, y_train)
 
     def predict(self, x):
-        return self.gbdt.predict(xgb.DMatrix(x))
+        return self.clf.predict(x)
 
 
 def get_oof(clf):
@@ -119,18 +95,18 @@ def get_oof(clf):
     return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
 
 
-xg = XgbWrapper(seed=RANDOM_STATE, params=xgb_params)
-xg_oof_train, xg_oof_test = get_oof(xg)
+et = SklearnWrapper(clf=ExtraTreesRegressor, seed=RANDOM_STATE, params=et_params)
+xg_oof_train, xg_oof_test = get_oof(et)
 
 print
 print xg_oof_train[:, 0].shape, train.shape
 print xg_oof_train[:, 0]
 
-print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
+print("et-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
 
 oof_train = pd.DataFrame({'id': train['id'], 'loss': (np.exp(xg_oof_train) - shift)[:, 0]})
-oof_train.to_csv('oof/xgb_train_t.csv', index=False)
+oof_train.to_csv('oof/et_train.csv', index=False)
 
 oof_test = pd.DataFrame({'id': test['id'], 'loss': (np.exp(xg_oof_test) - shift)[:, 0]})
-oof_test.to_csv('oof/xgb_test_t.csv', index=False)
+oof_test.to_csv('oof/et_test.csv', index=False)
 
