@@ -26,7 +26,7 @@ from sklearn.preprocessing import StandardScaler
 from scipy.sparse import csr_matrix, hstack
 from sklearn.neighbors import KNeighborsRegressor
 import clean_data
-
+from sklearn.ensemble import RandomForestRegressor
 
 RANDOM_STATE = 2016
 n_folds = 5
@@ -36,35 +36,40 @@ def evalerror(preds, dtrain):
     return mean_absolute_error(np.exp(preds), np.exp(dtrain))
 
 
-def knn_evaluate(n_neighbors, p):
-    knn = KNeighborsRegressor(n_jobs=-1,
-                              n_neighbors=round(n_neighbors),
-                              p=round(p))
+def rf_evaluate(max_depth, max_features):#, min_samples_leaf):
+    rf = RandomForestRegressor(n_jobs=-1,
+                              max_depth=round(max_depth),
+                              max_features=max_features,
+                               # min_samples_leaf=min_samples_leaf
+                               # min_samples_split=round(min_samples_split)
+                               )
 
     kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).get_n_splits(X_train)
 
-    return -cross_val_score(knn, X_train, y_train, cv=kf, scoring=make_scorer(evalerror)).mean()
+    return -cross_val_score(rf, X_train, y_train, cv=kf, scoring=make_scorer(evalerror)).mean()
 
 
 if __name__ == '__main__':
-    num_rounds = 10000
+    num_rounds = 1000
     random_state = 2016
-    num_iter = 50
+    num_iter = 500
     init_points = 10
     shift = 0
 
-    X_train, y_train, _, _ = clean_data.oof_categorical(scale=True)
+    X_train, y_train, _, _ = clean_data.label_encode(shift=200)
     print X_train.shape, y_train.shape
 
     # previous_points = pd.read_csv('params/parameters.csv')
 
-    knnBO = BayesianOptimization(knn_evaluate, {'n_neighbors': (2, 10),
-                                                'p': (1, 10)
+    rfBO = BayesianOptimization(rf_evaluate, {'max_depth': (3, 30),
+                                                'max_features': (0.1, 1.0),
+                                              # 'min_samples_leaf': (0.01, 0.5)
+                                                # 'min_samples_split': (2, 10)
                                                 })
 
     # xgbBO.initialize_df(previous_points)
 
-    knnBO.maximize(init_points=init_points, n_iter=num_iter)
+    rfBO.maximize(init_points=init_points, n_iter=num_iter)
 
     # Save results
     param_cache_path = 'params'
@@ -73,5 +78,5 @@ if __name__ == '__main__':
     except:
         pass
 
-    file_name = 'params/knn_parameters.csv'
-    knnBO.points_to_csv(file_name)
+    file_name = 'params/rf_parameters.csv'
+    rfBO.points_to_csv(file_name)
