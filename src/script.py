@@ -6,22 +6,23 @@ Title: Neural network (Keras) with sparse data
 
 ## import libraries
 import numpy as np
-from keras.constraints import maxnorm
 
 np.random.seed(123)
 
 import pandas as pd
-import subprocess
 from scipy.sparse import csr_matrix, hstack
 from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import KFold
 from keras.models import Sequential
 from keras.optimizers import Nadam
-from keras.layers import Dense, Dropout, Activation, BatchNormalization
-from keras.layers.advanced_activations import PReLU
+from keras.layers import Dense, Dropout, Activation, BatchNormalization, Convolution1D, MaxPooling1D
+from keras.layers.advanced_activations import PReLU, ELU
+
 from tqdm import tqdm
 import keras.backend as K
+import clean_data
+
 
 ## Batch generators ##################################################################################################################################
 def f_eval(y_true, y_pred):
@@ -37,7 +38,7 @@ def batch_generator(X, y, batch_size, shuffle):
         np.random.shuffle(sample_index)
     while True:
         batch_index = sample_index[batch_size*counter:batch_size*(counter+1)]
-        X_batch = X[batch_index,:].toarray()
+        X_batch = X[batch_index, :].toarray()
         y_batch = y[batch_index]
         counter += 1
         yield X_batch, y_batch
@@ -56,112 +57,53 @@ def batch_generatorp(X, batch_size, shuffle):
         X_batch = X[batch_index, :].toarray()
         counter += 1
         yield X_batch
-        if (counter == number_of_batches):
+        if counter == number_of_batches:
             counter = 0
 
-########################################################################################################################################################
-
-## read data
-train = pd.read_csv('../data/train.csv')
-test = pd.read_csv('../data/test.csv')
-
-## set test loss to NaN
-test['loss'] = np.nan
-
-## response and IDs
-# shift = 200
-shift = 0
-y = np.log(train['loss'].values + shift)
-
-y_mean = y.mean()
-
-y = y - y_mean
-id_train = train['id'].values
-id_test = test['id'].values
-
-## stack train test
-ntrain = train.shape[0]
-joined = pd.concat((train, test), axis=0)
-# joined = joined.drop(['cat110', 'cat116'], 1)
-
-## Preprocessing and transforming to sparse data
-
-cat_columns = joined.select_dtypes(include=['object']).columns
-
-for column in list(cat_columns):
-    if train[column].nunique() != test[column].nunique():
-        # Let's find extra categories...
-        set_train = set(train[column].unique())
-        set_test = set(test[column].unique())
-        remove_train = set_train - set_test
-        remove_test = set_test - set_train
-
-        remove = remove_train.union(remove_test)
-        # print column, remove
-
-        def filter_cat(x):
-            if x in remove:
-                return np.nan
-            return x
-
-        joined[column] = joined[column].apply(lambda x: filter_cat(x), 1)
-        # print 'unique =', joined[column].nunique()
-
-sparse_data = []
-
-for f in tqdm(cat_columns):
-    dummy = pd.get_dummies(joined[f].astype('category'))
-    tmp = csr_matrix(dummy)
-    sparse_data.append(tmp)
-
-
-f_num = [f for f in joined.columns if 'cont' in f]
-scaler = StandardScaler()
-tmp = csr_matrix(scaler.fit_transform(joined[f_num]))
-sparse_data.append(tmp)
-
-del(joined, train, test)
-
-## sparse train and test data
-xtr_te = hstack(sparse_data, format='csr')
-xtrain = xtr_te[:ntrain, :]
-xtest = xtr_te[ntrain:, :]
-
-print('Dim train', xtrain.shape)
-print('Dim test', xtest.shape)
-
-del(xtr_te, sparse_data, tmp)
-
-# def nn_model():
-#     model = Sequential()
-#     model.add(Dense(400, init='he_normal', activation='elu', input_dim=xtrain.shape[1]))
-#     model.add(Dropout(0.4))
-#     # model.add(BatchNormalization())
-#     model.add(Dense(200, init='he_normal', activation='elu'))
-#     model.add(Dropout(0.4))
-#     # model.add(BatchNormalization())
-#     model.add(Dense(50, init='he_normal', activation='elu'))
-#     model.add(Dropout(0.2))
-#     model.add(Dense(1))
-#     # model.compile(loss='mae', optimizer='nadam')
-#     return(model)
 
 def nn_model():
     model = Sequential()
-    model.add(Dense(400, input_dim=xtrain.shape[1], init='he_normal', activation='elu'))
-    # model.add(PReLU())
+    model.add(Dense(400, init='he_normal', activation='elu', input_dim=xtrain.shape[1]))
     model.add(Dropout(0.4))
     # model.add(BatchNormalization())
     model.add(Dense(200, init='he_normal', activation='elu'))
-    # model.add(PReLU())
     model.add(Dropout(0.4))
     # model.add(BatchNormalization())
     model.add(Dense(50, init='he_normal', activation='elu'))
-    # model.add(PReLU())
-    model.add(Dropout(0.3))
-    model.add(Dense(1, init='he_normal'))
-    return model
+    model.add(Dropout(0.2))
+    model.add(Dense(1))
+    # model.compile(loss='mae', optimizer='nadam')
+    return(model)
 
+# def nn_model():
+#     model = Sequential()
+#     model.add(Dense(300, init='he_normal', input_dim=xtrain.shape[1]))
+#     # model.add(BatchNormalization())
+#     model.add(ELU())
+#     model.add(Dropout(0.4))
+#     model.add(Dense(100, init='he_normal'))
+#     # model.add(BatchNormalization())
+#     model.add(ELU())
+#     model.add(Dropout(0.4))
+#     model.add(Dense(50, init='he_normal', activation='elu'))
+#     model.add(Dropout(0.2))
+#     model.add(Dense(1, init='he_normal'))
+#     return model
+
+shift = 0
+xtrain, y, xtest, y_mean, id_test, id_train = clean_data.one_hot_categorical(shift=shift, subtract_mean=True)
+
+
+# print xtrain.shape
+# print y
+# xtrain, y, xtest, y_mean, id_test, id_train = clean_data.oof_categorical(shift=0, scale=True, subtract_min=True)
+
+print xtrain.shape, y.shape
+# print pd.DataFrame(xtrain.todense()).describe()
+print y.min(), y.max(), y.mean()
+
+xtrain = csr_matrix(xtrain)
+xtest = csr_matrix(xtest)
 
 ## cv-folds
 nfolds = 5
@@ -171,7 +113,7 @@ folds = KFold(len(y), n_folds=nfolds, shuffle=True, random_state=2016)
 i = 0
 nbags = 5
 nepochs = 20
-batch_size = 2**7
+batch_size = 2**6
 pred_oob = np.zeros(xtrain.shape[0])
 pred_test = np.zeros(xtest.shape[0])
 
@@ -190,22 +132,22 @@ for i, (inTr, inTe) in enumerate(folds):
                                   samples_per_epoch=10000 * batch_size,
                                   validation_data=batch_generator(xte, yte, batch_size, False),
                                   nb_val_samples=xte.shape[0])
-        pred += model.predict_generator(generator=batch_generatorp(xte, 800, False), val_samples=xte.shape[0])[:,0]
-        pred_test += model.predict_generator(generator=batch_generatorp(xtest, 800, False), val_samples=xtest.shape[0])[:, 0]
+        pred += np.exp(model.predict_generator(generator=batch_generatorp(xte, 800, False), val_samples=xte.shape[0])[:, 0] + y_mean)
+        pred_test += np.exp(model.predict_generator(generator=batch_generatorp(xtest, 800, False), val_samples=xtest.shape[0])[:, 0] + y_mean)
     pred /= nbags
     pred_oob[inTe] = pred
-    score = mean_absolute_error(np.exp(yte + y_mean), np.exp(pred + y_mean))
+    score = mean_absolute_error(np.exp(yte + y_mean), pred + y_mean)
     print('Fold ', i, '- MAE:', score)
 
-print('Total - MAE:', mean_absolute_error(np.exp(y + y_mean), np.exp(pred_oob + y_mean)))
+print('Total - MAE:', mean_absolute_error(np.exp(y + y_mean), pred_oob + y_mean))
 
-## train predictions
-df = pd.DataFrame({'id': id_train, 'loss': np.exp(pred_oob + y_mean) - shift})
-df.to_csv('preds_oob.csv', index = False)
+# train predictions
+df = pd.DataFrame({'id': id_train, 'loss': pred_oob - shift})
+df.to_csv('preds_oob.csv', index=False)
 
-## test predictions
+# test predictions
 pred_test /= (nfolds*nbags)
-df = pd.DataFrame({'id': id_test, 'loss': np.exp(pred_test + y_mean) - shift})
+df = pd.DataFrame({'id': id_test, 'loss': pred_test - shift})
 df.to_csv('submission_keras.csv', index=False)
 
 
