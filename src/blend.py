@@ -30,15 +30,34 @@ xgb_test = pd.read_csv('oof/xgb_test.csv').rename(columns={'loss': 'xgb_loss'})
 nn_train = pd.read_csv('oof/NN_train.csv').rename(columns={'loss': 'nn_loss'})
 nn_test = pd.read_csv('oof/NN_test.csv').rename(columns={'loss': 'nn_loss'})
 
-X_train = train[['id', 'loss']].merge(xgb_train, on='id').merge(nn_train, on='id')
-X_test = test[['id', 'cat1']].merge(xgb_test, on='id').merge(nn_test, on='id').drop('cat1', 1)
+et_train = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
+et_test = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
+
+
+knn_numeric_train = pd.read_csv('oof/knn_numeric_train.csv').rename(columns={'loss': 'knn_numeric_loss'})
+knn_numeric_test = pd.read_csv('oof/knn_numeric_test.csv').rename(columns={'loss': 'knn_numeric_loss'})
+
+
+X_train = (train[['id', 'loss']]
+           .merge(xgb_train, on='id')
+           .merge(nn_train, on='id')
+           .merge(et_train, on='id')
+           .merge(knn_numeric_train, on='id')
+           )
+
+X_test = (test[['id', 'cat1']]
+          .merge(xgb_test, on='id')
+          .merge(nn_test, on='id')
+          .merge(et_test, on='id')
+          .merge(knn_numeric_test, on='id')
+          .drop('cat1', 1))
 
 
 shift = 200
 
 y = np.log(X_train['loss'] + shift)
-X_train = X_train.drop(['id', 'loss'], 1)
-X_test = X_test.drop('id', 1)
+X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.log(x + shift))
+X_test = X_test.drop('id', 1).applymap(lambda x: np.log(x + shift))
 
 test_ids = test['id']
 
@@ -53,9 +72,9 @@ params = {
     # 'scale_pos_weight':  1,
     'min_child_weight': 1,
     'eta': 0.01,
-    # 'colsample_bytree': 0.6,
-    'max_depth': 3,
-    'subsample': 0.8,
+    'colsample_bytree': 0.75,
+    'max_depth': 4,
+    'subsample': 0.6,
     # 'alpha': 5,
     'gamma': 1,
     'silent': 1,
