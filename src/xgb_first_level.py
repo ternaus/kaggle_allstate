@@ -111,9 +111,9 @@ def get_oof(clf):
 
         clf.train(x_tr, y_tr)
 
-        oof_train[test_index] = clf.predict(x_te)
-        oof_test_skf[i, :] = clf.predict(X_test)
-        print mean_absolute_error(np.exp(y_te), np.exp(oof_train[test_index]))
+        oof_train[test_index] = np.exp(clf.predict(x_te))
+        oof_test_skf[i, :] = np.exp(clf.predict(X_test))
+        print mean_absolute_error(np.exp(y_te), oof_train[test_index])
         print
     oof_test[:] = oof_test_skf.mean(axis=0)
     return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
@@ -126,11 +126,11 @@ print
 print xg_oof_train[:, 0].shape, train.shape
 print xg_oof_train[:, 0]
 
-print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
+print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
-oof_train = pd.DataFrame({'id': train['id'], 'loss': (np.exp(xg_oof_train) - shift)[:, 0]})
+oof_train = pd.DataFrame({'id': train['id'], 'loss': (xg_oof_train - shift)[:, 0]})
 oof_train.to_csv('oof/xgb_train_t.csv', index=False)
 
-oof_test = pd.DataFrame({'id': test['id'], 'loss': (np.exp(xg_oof_test) - shift)[:, 0]})
+oof_test = pd.DataFrame({'id': test['id'], 'loss': (xg_oof_test - shift)[:, 0]})
 oof_test.to_csv('oof/xgb_test_t.csv', index=False)
 
