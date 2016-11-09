@@ -1,7 +1,6 @@
 from __future__ import division
 import pandas as pd
-from sklearn.ensemble import ExtraTreesRegressor
-
+from sklearn.ensemble import RandomForestRegressor
 
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
@@ -56,8 +55,8 @@ kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 et_params = {
     'n_jobs': -1,
     'n_estimators': 1000,
-    'max_features': 0.5,
-    'max_depth': 28,
+    'max_features': 0.4904,
+    'max_depth': 15,
     'min_samples_leaf': 2,
 }
 
@@ -96,18 +95,18 @@ def get_oof(clf):
     return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
 
 
-et = SklearnWrapper(clf=ExtraTreesRegressor, seed=RANDOM_STATE, params=et_params)
-xg_oof_train, xg_oof_test = get_oof(et)
+rf = SklearnWrapper(clf=RandomForestRegressor, seed=RANDOM_STATE, params=et_params)
+xg_oof_train, xg_oof_test = get_oof(rf)
 
 print
 print xg_oof_train[:, 0].shape, train.shape
 print xg_oof_train[:, 0]
 
-print("et-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
+print("rf-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
 
 oof_train = pd.DataFrame({'id': train['id'], 'loss': (np.exp(xg_oof_train) - shift)[:, 0]})
-oof_train.to_csv('oof/et_train.csv', index=False)
+oof_train.to_csv('oof/rf_train.csv', index=False)
 
 oof_test = pd.DataFrame({'id': test['id'], 'loss': (np.exp(xg_oof_test) - shift)[:, 0]})
-oof_test.to_csv('oof/et_test.csv', index=False)
+oof_test.to_csv('oof/rf_test.csv', index=False)
 
