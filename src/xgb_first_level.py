@@ -7,6 +7,7 @@ import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from pylab import *
+from tqdm import tqdm
 
 train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
@@ -59,7 +60,6 @@ X_train = train.drop(['loss', 'id'], 1).values
 X_test = test.drop(['loss', 'id'], 1).values
 y_train = np.log(train['loss'] + shift).values
 
-num_rounds = 300000
 RANDOM_STATE = 2016
 xgb_params = {
     'min_child_weight': 1,
@@ -89,18 +89,20 @@ class XgbWrapper(object):
         self.param['seed'] = seed
         self.nrounds = params.pop('nrounds', 250)
 
-    def train(self, x_train, y_train):
+    def train(self, x_train, y_train, seed):
         dtrain = xgb.DMatrix(x_train, label=y_train)
+        self.param['seed'] = seed
         self.gbdt = xgb.train(self.param, dtrain, self.nrounds, feval=evalerror, obj=logregobj)
 
     def predict(self, x):
         return self.gbdt.predict(xgb.DMatrix(x))
 
 
+nbags = 2
+
 def get_oof(clf):
-    oof_train = np.zeros((num_train,))
-    oof_test = np.zeros((num_test,))
-    oof_test_skf = np.empty((n_folds, num_test))
+    pred_oob = np.zeros(X_train.shape[0])
+    pred_test = np.zeros(X_test.shape[0])
 
     for i, (train_index, test_index) in enumerate(kf.split(X_train)):
         print "Fold = ", i
@@ -109,28 +111,32 @@ def get_oof(clf):
         x_te = X_train[test_index]
         y_te = y_train[test_index]
 
-        clf.train(x_tr, y_tr)
+        pred = np.zeros(x_te.shape[0])
 
-        oof_train[test_index] = np.exp(clf.predict(x_te))
-        oof_test_skf[i, :] = np.exp(clf.predict(X_test))
-        print mean_absolute_error(np.exp(y_te), oof_train[test_index])
-        print
-    oof_test[:] = oof_test_skf.mean(axis=0)
-    return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
+        for j in tqdm(range(nbags)):
+            clf.train(x_tr, y_tr, seed=RANDOM_STATE + i)
+
+            pred += np.exp(clf.predict(x_te))
+            pred_test += np.exp(clf.predict(X_test))
+
+        pred /= nbags
+        pred_oob[train_index] = pred
+        score = mean_absolute_error(np.exp(y_te), pred)
+        print('Fold ', i, '- MAE:', score)
+
+    return pred_oob, pred_test
 
 
 xg = XgbWrapper(seed=RANDOM_STATE, params=xgb_params)
 xg_oof_train, xg_oof_test = get_oof(xg)
 
-print
-print xg_oof_train[:, 0].shape, train.shape
-print xg_oof_train[:, 0]
-
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
-oof_train = pd.DataFrame({'id': train['id'], 'loss': (xg_oof_train - shift)[:, 0]})
-oof_train.to_csv('oof/xgb_train_t.csv', index=False)
+oof_train = pd.DataFrame({'id': train['id'], 'loss': (xg_oof_train - shift)})
+oof_train.to_csv('oof/xgb_train_t1.csv', index=False)
 
-oof_test = pd.DataFrame({'id': test['id'], 'loss': (xg_oof_test - shift)[:, 0]})
-oof_test.to_csv('oof/xgb_test_t.csv', index=False)
+xg_oof_test /= (n_folds * nbags)
+
+oof_test = pd.DataFrame({'id': test['id'], 'loss': (xg_oof_test - shift)})
+oof_test.to_csv('oof/xgb_test_t1.csv', index=False)
 

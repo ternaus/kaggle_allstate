@@ -154,7 +154,7 @@ folds = KFold(len(y), n_folds=nfolds, shuffle=True, random_state=111)
 
 # train models
 i = 0
-nbags = 10
+nbags = 20
 nepochs = 55
 pred_oob = np.zeros(xtrain.shape[0])
 pred_test = np.zeros(xtest.shape[0])
