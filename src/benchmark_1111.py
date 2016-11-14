@@ -17,8 +17,8 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import PReLU
-
-
+from sklearn.utils import shuffle
+from tqdm import tqdm
 ## Batch generators ##################################################################################################################################
 
 def batch_generator(X, y, batch_size, shuffle):
@@ -145,7 +145,7 @@ def nn_model():
 
     model.add(Dense(1, init='he_normal'))
     model.compile(loss='mae', optimizer='adadelta')
-    return (model)
+    return model
 
 
 # cv-folds
@@ -153,19 +153,19 @@ nfolds = 5
 folds = KFold(len(y), n_folds=nfolds, shuffle=True, random_state=111)
 
 # train models
-i = 0
-nbags = 20
-nepochs = 55
+nbags = 100
+nepochs = 60
 pred_oob = np.zeros(xtrain.shape[0])
 pred_test = np.zeros(xtest.shape[0])
 
-for (inTr, inTe) in folds:
+for i, (inTr, inTe) in enumerate(folds):
     xtr = xtrain[inTr]
     ytr = y[inTr]
+    xtr, ytr = shuffle(xtr, ytr, random_state=2016 + i)
     xte = xtrain[inTe]
     yte = y[inTe]
     pred = np.zeros(xte.shape[0])
-    for j in range(nbags):
+    for j in tqdm(range(nbags)):
         model = nn_model()
         fit = model.fit_generator(generator=batch_generator(xtr, ytr, 128, True),
                                   nb_epoch=nepochs,
@@ -178,16 +178,16 @@ for (inTr, inTe) in folds:
     pred /= nbags
     pred_oob[inTe] = pred
     score = mean_absolute_error(np.exp(yte) - 200, pred)
-    i += 1
+
     print('Fold ', i, '- MAE:', score)
 
 print('Total - MAE:', mean_absolute_error(np.exp(y) - 200, pred_oob))
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob})
-df.to_csv('oof/NN_train_2.csv', index=False)
+df.to_csv('oof/NN_train_4.csv', index=False)
 
 # test predictions
 pred_test /= (nfolds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test})
-df.to_csv('oof/NN_test_2.csv', index=False)
+df.to_csv('oof/NN_test_4.csv', index=False)
