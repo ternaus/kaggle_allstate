@@ -8,6 +8,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold
 from pylab import *
 from tqdm import tqdm
+from sklearn.utils import shuffle
 
 train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
@@ -98,7 +99,8 @@ class XgbWrapper(object):
         return self.gbdt.predict(xgb.DMatrix(x))
 
 
-nbags = 2
+nbags = 10
+
 
 def get_oof(clf):
     pred_oob = np.zeros(X_train.shape[0])
@@ -108,6 +110,8 @@ def get_oof(clf):
         print "Fold = ", i
         x_tr = X_train[train_index]
         y_tr = y_train[train_index]
+
+        x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i)
         x_te = X_train[test_index]
         y_te = y_train[test_index]
 
@@ -133,10 +137,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': train['id'], 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/xgb_train_t1.csv', index=False)
+oof_train.to_csv('oof/xgb_train_t2.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': test['id'], 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/xgb_test_t1.csv', index=False)
+oof_test.to_csv('oof/xgb_test_t2.csv', index=False)
 
