@@ -17,9 +17,11 @@ from sklearn.cross_validation import KFold
 
 from pylab import *
 
+
 def evalerror(preds, dtrain):
     labels = dtrain.get_label()
     return 'mae', mean_absolute_error(np.exp(preds), np.exp(labels))
+
 
 train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
@@ -48,8 +50,8 @@ X_test = (test[['id', 'cat1']]
 shift = 200
 
 y = np.log(X_train['loss'] + shift)
-X_train = X_train.drop(['id', 'loss'], 1)
-X_test = X_test.drop('id', 1)
+X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.log(x + shift))
+X_test = X_test.drop('id', 1).applymap(lambda x: np.log(x + shift))
 
 test_ids = test['id']
 
@@ -58,22 +60,24 @@ print X_train.shape, xgb_train.shape, nn_train.shape
 num_rounds = 300000
 RANDOM_STATE = 2016
 params = {
-    #     "objective": "binary:logistic",
-    # 'booster': 'dart',
-    # 'rate_drop': 0.1,
-    # 'scale_pos_weight':  1,
-    'min_child_weight': 1,
-    'eta': 0.01,
-    # 'colsample_bytree': 0.6,
-    'max_depth': 3,
-    'subsample': 0.8,
-    # 'alpha': 5,
-    'gamma': 1,
-    'silent': 1,
-    # 'base_score': 3,
-    # 'eval_metric': ['rmse', 'mae'],
-    'verbose_eval': True,
-    'seed': RANDOM_STATE
+    'booster': 'gblinear',
+    'lambda': 10,
+    # #     "objective": "binary:logistic",
+    # # 'booster': 'dart',
+    # # 'rate_drop': 0.1,
+    # # 'scale_pos_weight':  1,
+    # 'min_child_weight': 1,
+    # 'eta': 0.01,
+    # # 'colsample_bytree': 0.6,
+    # 'max_depth': 3,
+    # 'subsample': 0.8,
+    # # 'alpha': 5,
+    # 'gamma': 1,
+    # 'silent': 1,
+    # # 'base_score': 3,
+    # # 'eval_metric': ['rmse', 'mae'],
+    # 'verbose_eval': True,
+    # 'seed': RANDOM_STATE
 }
 
 
