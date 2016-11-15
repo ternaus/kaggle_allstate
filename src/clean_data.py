@@ -7,6 +7,8 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from scipy.sparse import csr_matrix, hstack
 from tqdm import tqdm
+from scipy.stats import skew, boxcox
+import itertools
 
 
 def label_encode(shift=200):
@@ -181,3 +183,74 @@ def one_hot_categorical(shift=0, subtract_mean=False):
     xtrain = xtr_te[:ntrain, :]
     xtest = xtr_te[ntrain:, :]
     return xtrain, y, xtest, y_mean, id_test, id_train
+
+
+def encode(charcode):
+    r = 0
+    ln = len(charcode)
+    for i in range(ln):
+        r += (ord(charcode[i]) - ord('A') + 1) * 26**(ln-i-1)
+    return r
+
+
+def mungeskewed(train, test, numeric_feats):
+    ntrain = train.shape[0]
+    test['loss'] = 0
+    train_test = pd.concat((train, test)).reset_index(drop=True)
+    # compute skew and do Box-Cox transformation (Tilli)
+    skewed_feats = train[numeric_feats].apply(lambda x: skew(x.dropna()))
+    print
+    print("Skew in numeric features:")
+    print(skewed_feats)
+    skewed_feats = skewed_feats[skewed_feats > 0.25]
+    skewed_feats = skewed_feats.index
+
+    for feats in skewed_feats:
+        train_test[feats] += 1
+        train_test[feats], lam = boxcox(train_test[feats])
+    return train_test, ntrain
+
+
+def fancy(shift=200):
+    """
+    From https://www.kaggle.com/modkzs/allstate-claims-severity/lexical-encoding-feature-comb/code
+    :param shift:
+    :return:
+    """
+    COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+        ',')
+    train = pd.read_csv('../data/train.csv')
+    test = pd.read_csv('../data/test.csv')
+    numeric_feats = [x for x in train.columns if 'cont' in x]
+
+    train_test, ntrain = mungeskewed(train, test, numeric_feats)
+
+    # Adding quadratic features
+    for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
+        feat = comb[0] + "_" + comb[1]
+
+        encode_dict = {}
+        for value in (train_test[comb[0]] + train_test[comb[1]]).unique():
+            encode_dict[value] = encode(value)
+
+        train_test[feat] = (train_test[comb[0]] + train_test[comb[1]]).map(encode_dict)
+
+    # Encoding categorical features
+    cats = [x for x in train.columns if 'cat' in x]
+    for col in tqdm(cats):
+        encode_dict = {}
+        for value in train_test[col].unique():
+            encode_dict[value] = encode(value)
+
+        train_test[col] = train_test[col].map(encode_dict)
+
+    train_test['loss'] = np.log(train_test.loss + shift)
+
+    print 'scaling'
+    ss = StandardScaler()
+    train_test[numeric_feats] = ss.fit_transform(train_test[numeric_feats].values)
+    X_train = train_test.iloc[:ntrain, :]
+    X_test = train_test.iloc[ntrain:, :]
+    y_train = np.log(X_train['loss'] + shift)
+    y_mean = y_train.mean()
+    return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
