@@ -17,15 +17,11 @@ import os
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import KFold, cross_val_score
-from sklearn.grid_search import GridSearchCV
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.linear_model import Ridge
+
 from sklearn.metrics import make_scorer
 from pylab import *
-from sklearn.preprocessing import StandardScaler
-from scipy.sparse import csr_matrix, hstack
-from sklearn.neighbors import KNeighborsRegressor
 import clean_data
+from sklearn.linear_model import ElasticNet, Ridge
 
 
 RANDOM_STATE = 2016
@@ -36,35 +32,35 @@ def evalerror(preds, dtrain):
     return mean_absolute_error(np.exp(preds), np.exp(dtrain))
 
 
-def knn_evaluate(n_neighbors, p):
-    knn = KNeighborsRegressor(n_jobs=-1,
-                              n_neighbors=round(n_neighbors),
-                              p=round(p))
+def en_evaluate(alpha):
+
+    # clf = ElasticNet(alpha=alpha, l1_ratio=l1_ratio)
+    clf = Ridge(alpha=alpha)
 
     kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).get_n_splits(X_train)
 
-    return -cross_val_score(knn, X_train, y_train, cv=kf, scoring=make_scorer(evalerror)).mean()
+    return -cross_val_score(clf, X_train, y_train, cv=kf, scoring=make_scorer(evalerror), n_jobs=-1).mean()
 
 
 if __name__ == '__main__':
     num_rounds = 10000
     random_state = 2016
-    num_iter = 50
+    num_iter = 100
     init_points = 10
-    shift = 0
+    shift = 200
 
-    X_train, y_train, _, _ = clean_data.oof_categorical(scale=True)
+    # X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical()
+    X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical(shift=shift, quadratic=True)
+
     print X_train.shape, y_train.shape
 
     # previous_points = pd.read_csv('params/parameters.csv')
 
-    knnBO = BayesianOptimization(knn_evaluate, {'n_neighbors': (2, 10),
-                                                'p': (1, 10)
-                                                })
+    lrBO = BayesianOptimization(en_evaluate, {'alpha': (0, 1000)})
 
     # xgbBO.initialize_df(previous_points)
 
-    knnBO.maximize(init_points=init_points, n_iter=num_iter)
+    lrBO.maximize(init_points=init_points, n_iter=num_iter)
 
     # Save results
     param_cache_path = 'params'
@@ -73,5 +69,5 @@ if __name__ == '__main__':
     except:
         pass
 
-    file_name = 'params/knn_parameters.csv'
-    knnBO.points_to_csv(file_name)
+    file_name = 'params/lr_parameters.csv'
+    lrBO.points_to_csv(file_name)
