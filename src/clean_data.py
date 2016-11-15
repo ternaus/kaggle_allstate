@@ -68,6 +68,7 @@ def oof_categorical(shift=200, scale=False, subtract_min=False):
     test['loss'] = np.nan
 
     joined = pd.concat([train, test])
+
     for column in list(train.select_dtypes(include=['object']).columns):
         g = train.groupby(column)['loss'].mean()
 
@@ -87,6 +88,7 @@ def oof_categorical(shift=200, scale=False, subtract_min=False):
                 return x
 
             joined[column] = joined[column].apply(lambda x: filter_cat(x), 1)
+
             print 'unique =', joined[column].nunique()
 
         joined[column] = joined[column].map(g)
@@ -118,7 +120,29 @@ def oof_categorical(shift=200, scale=False, subtract_min=False):
     return X_train, y_train, X_test, y_mean, test_ids, train_ids
 
 
-def one_hot_categorical(shift=0, subtract_mean=False):
+def filter_cat(joined, train, test, column):
+    if train[column].nunique() != test[column].nunique():
+        # Let's find extra categories...
+        set_train = set(train[column].unique())
+        set_test = set(test[column].unique())
+        remove_train = set_train - set_test
+        remove_test = set_test - set_train
+
+        remove = remove_train.union(remove_test)
+        print column, remove
+
+        # print column, remove
+
+        def helper(x):
+            if x in remove:
+                return np.nan
+            return x
+
+        return joined[column].apply(lambda x: helper(x), 1)
+    return joined[column]
+
+
+def one_hot_categorical(shift=0, subtract_mean=False, quadratic=False):
     ## read data
     train = pd.read_csv('../data/train.csv')
     test = pd.read_csv('../data/test.csv')
@@ -141,28 +165,34 @@ def one_hot_categorical(shift=0, subtract_mean=False):
     ntrain = train.shape[0]
     joined = pd.concat((train, test), axis=0)
 
-    # Preprocessing and transforming to sparse data
+    if quadratic:
+        numeric_feats = [x for x in train.columns if 'cont' in x]
 
+        joined, ntrain = mungeskewed(train, test, numeric_feats)
+        COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+        ',')
+        for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
+            feat = comb[0] + "_" + comb[1]
+
+            joined[feat] = joined[comb[0]] + joined[comb[1]]
+
+        train = joined.iloc[:ntrain, :]
+        test = joined.iloc[ntrain:, :]
+
+    # Preprocessing and transforming to sparse data
+    print joined.head().info()
     cat_columns = joined.select_dtypes(include=['object']).columns
 
+    to_drop = []
     for column in list(cat_columns):
-        if train[column].nunique() != test[column].nunique():
-            # Let's find extra categories...
-            set_train = set(train[column].unique())
-            set_test = set(test[column].unique())
-            remove_train = set_train - set_test
-            remove_test = set_test - set_train
+        joined[column] = filter_cat(joined, train, test, column)
+        if joined[column].nunique() == 1:
+            to_drop += [column]
 
-            remove = remove_train.union(remove_test)
-            # print column, remove
+    print 'dropping = ', to_drop
+    joined = joined.drop(to_drop, 1)
 
-            def filter_cat(x):
-                if x in remove:
-                    return np.nan
-                return x
-
-            joined[column] = joined[column].apply(lambda x: filter_cat(x), 1)
-            # print 'unique =', joined[column].nunique()
+    cat_columns = joined.select_dtypes(include=['object']).columns
 
     sparse_data = []
 
@@ -223,34 +253,44 @@ def fancy(shift=200):
     test = pd.read_csv('../data/test.csv')
     numeric_feats = [x for x in train.columns if 'cont' in x]
 
-    train_test, ntrain = mungeskewed(train, test, numeric_feats)
+    joined, ntrain = mungeskewed(train, test, numeric_feats)
 
     # Adding quadratic features
     for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
         feat = comb[0] + "_" + comb[1]
 
-        encode_dict = {}
-        for value in (train_test[comb[0]] + train_test[comb[1]]).unique():
-            encode_dict[value] = encode(value)
+        joined[feat] = joined[comb[0]] + joined[comb[1]]
+        assert joined[feat].isnull().sum() == 0
 
-        train_test[feat] = (train_test[comb[0]] + train_test[comb[1]]).map(encode_dict)
+    train = joined.iloc[:ntrain, :]
+    test = joined.iloc[ntrain:, :]
 
     # Encoding categorical features
-    cats = [x for x in train.columns if 'cat' in x]
-    for col in tqdm(cats):
+    cats = [x for x in joined.columns if 'cat' in x]
+    to_drop = []
+    for column in tqdm(cats):
+        joined[column] = filter_cat(joined, train, test, column)
+        if joined[column].nunique() == 1:
+            to_drop += [column]
+            continue
+        joined[column] = joined[column].fillna('unknown')
+
         encode_dict = {}
-        for value in train_test[col].unique():
+        for value in joined[column].unique():
             encode_dict[value] = encode(value)
 
-        train_test[col] = train_test[col].map(encode_dict)
+        joined[column] = joined[column].map(encode_dict)
+        assert joined[column].isnull().sum() == 0
 
-    train_test['loss'] = np.log(train_test.loss + shift)
+    print 'dropping = ', to_drop
+    joined = joined.drop(to_drop, 1)
 
     print 'scaling'
     ss = StandardScaler()
-    train_test[numeric_feats] = ss.fit_transform(train_test[numeric_feats].values)
-    X_train = train_test.iloc[:ntrain, :]
-    X_test = train_test.iloc[ntrain:, :]
+    joined[numeric_feats] = ss.fit_transform(joined[numeric_feats].values)
+    X_train = joined.iloc[:ntrain, :]
+    X_test = joined.iloc[ntrain:, :]
     y_train = np.log(X_train['loss'] + shift)
     y_mean = y_train.mean()
+
     return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
