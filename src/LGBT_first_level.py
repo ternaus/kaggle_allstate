@@ -87,42 +87,21 @@ def get_oof():
             pred_test += np.exp(clf.predict(X_test))
 
         pred /= nbags
-        pred_oob[train_index] = pred
+        pred_oob[test_index] = pred
         score = mean_absolute_error(np.exp(y_te), pred)
         print('Fold ', i, '- MAE:', score)
 
     return pred_oob, pred_test
 
-lgbt_params = {
-        'exec_path': os.path.expanduser('~/packages/LightGBM/lightgbm'),  # Change this to your LighGBM path
-        'config': '',
-        'application': 'regression',
-        'num_iterations': 3000,
-        'learning_rate': 0.01,
-        'num_leaves': 202,
-        'num_threads': 8,
-        'min_data_in_leaf': 9,
-        'metric': 'l1',
-        'feature_fraction': 0.3149,
-        'feature_fraction_seed': 2016,
-        'bagging_fraction': 1,
-        'bagging_freq': 1000,
-        'bagging_seed': 2016,
-        'early_stopping_round': 25,
-        # metric_freq=1,
-        'verbose': False
-}
-
 xg_oof_train, xg_oof_test = get_oof()
-
 
 print("lgbt-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': train_ids, 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/lgbt_train_1.csv', index=False)
+oof_train.to_csv('oof/lgbt_train.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': test_ids, 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/lgbt_test_1.csv', index=False)
+oof_test.to_csv('oof/lgbt_test.csv', index=False)
 
