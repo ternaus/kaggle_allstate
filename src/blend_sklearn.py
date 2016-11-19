@@ -74,7 +74,7 @@ knn_numeric_test = pd.read_csv('oof/knn_numeric_test.csv').rename(columns={'loss
 X_train = (train[['id', 'loss']]
            .merge(xgb_train_0, on='id')
            .merge(xgb_train, on='id')
-           .merge(xgb_train_1, on='id')
+           # .merge(xgb_train_1, on='id')
             .merge(xgb_train_2, on='id')
            .merge(nn_train, on='id')
            .merge(nn_train_1, on='id')
@@ -83,25 +83,25 @@ X_train = (train[['id', 'loss']]
            .merge(et_train, on='id')
             .merge(rf_train, on='id')
            # .merge(lr_train, on='id')
-            .merge(lgbt_train, on='id')
-            .merge(lgbt_train_1, on='id')
+           #  .merge(lgbt_train, on='id')
+           #  .merge(lgbt_train_1, on='id')
            # .merge(knn_numeric_train, on='id')
            )
 
 X_test = (test[['id', 'cat1']]
           .merge(xgb_test_0, on='id')
           .merge(xgb_test, on='id')
-          .merge(xgb_test_1, on='id')
+          # .merge(xgb_test_1, on='id')
             .merge(xgb_test_2, on='id')
           .merge(nn_test, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
-        .merge(nn_test_4, on='id')
+          .merge(nn_test_4, on='id')
           .merge(et_test, on='id')
           .merge(rf_test, on='id')
           # .merge(lr_test, on='id')
-          .merge(lgbt_test, on='id')
-          .merge(lgbt_test_1, on='id')
+          # .merge(lgbt_test, on='id')
+          # .merge(lgbt_test_1, on='id')
           # .merge(knn_numeric_test, on='id')
           .drop('cat1', 1))
 
@@ -139,7 +139,7 @@ clf.fit(X_train, y_train)
 for i in clf.grid_scores_:
     print i
 
-lr = Ridge(fit_intercept=False, alpha=0.001)
+lr = Ridge(fit_intercept=False, alpha=0)
 lr.fit(X_train, y_train)
 
 test_pred = np.exp(lr.predict(X_test)) - shift
