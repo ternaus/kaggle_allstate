@@ -32,7 +32,7 @@ def logregobj(preds, dtrain):
 
 shift = 200
 
-X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy(shift)
+X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy(shift, quadratic=True)
 
 X_train = X_train.values
 X_test = X_test.values
@@ -50,7 +50,7 @@ xgb_params = {
     'alpha': 5,
     'gamma': 1,
     'silent': 1,
-    # 'base_score': 2,
+    'base_score': y_mean,
     'verbose_eval': 1,
     'seed': RANDOM_STATE,
     'nrounds': 8000
@@ -79,8 +79,7 @@ class XgbWrapper(object):
     def predict(self, x):
         return self.gbdt.predict(xgb.DMatrix(x))
 
-nbags = 1
-
+nbags = 3
 
 def get_oof(clf):
     pred_oob = np.zeros(X_train.shape[0])
@@ -91,20 +90,20 @@ def get_oof(clf):
         x_tr = X_train[train_index]
         y_tr = y_train[train_index]
 
-        x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i)
         x_te = X_train[test_index]
         y_te = y_train[test_index]
 
         pred = np.zeros(x_te.shape[0])
 
         for j in range(nbags):
+            x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i + j)
             clf.train(x_tr, y_tr, RANDOM_STATE + i, x_te, y_te)
 
             pred += np.exp(clf.predict(x_te))
             pred_test += np.exp(clf.predict(X_test))
 
         pred /= nbags
-        pred_oob[train_index] = pred
+        pred_oob[test_index] = pred
         score = mean_absolute_error(np.exp(y_te), pred)
         print('Fold ', i, '- MAE:', score)
 
@@ -117,10 +116,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/xgb_train_t3.csv', index=False)
+oof_train.to_csv('oof/xgb_train_t1.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/xgb_test_t3.csv', index=False)
+oof_test.to_csv('oof/xgb_test_t1.csv', index=False)
 
