@@ -9,9 +9,8 @@ from sklearn.utils import shuffle
 from pylightgbm.models import GBMRegressor
 import os
 
-X_train, y_train, X_test, y_mean, test_ids, train_ids = clean_data.fancy(shift=200)
-
 shift = 200
+X_train, y_train, X_test, y_mean, test_ids, train_ids = clean_data.fancy(shift=shift)
 
 X_train = X_train.values
 X_test = X_test.values
@@ -51,35 +50,32 @@ def get_oof():
         x_tr = X_train[train_index]
         y_tr = y_train[train_index]
 
-        x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i)
-
         x_te = X_train[test_index]
         y_te = y_train[test_index]
 
         pred = np.zeros(x_te.shape[0])
 
         for j in range(nbags):
+            x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i + j)
             lgbt_params = {
                 'exec_path': os.path.expanduser('~/packages/LightGBM/lightgbm'),  # Change this to your LighGBM path
                 'config': '',
                 'application': 'regression',
                 'num_iterations': 3000,
                 'learning_rate': 0.01,
-                'num_leaves': 202,
+                'num_leaves': 213,
                 'num_threads': 8,
-                'min_data_in_leaf': 9,
+                'min_data_in_leaf': 4,
                 'metric': 'l1',
-                'feature_fraction': 0.3149,
-                'feature_fraction_seed': 2016,
-                'bagging_fraction': 1,
+                'feature_fraction': 0.2933,
+                'feature_fraction_seed': 2016 + i + j,
+                'bagging_fraction': 0.9804,
                 'bagging_freq': 100,
-                'bagging_seed': 2016,
+                'bagging_seed': 2016 + i + j,
                 'early_stopping_round': 25,
                 # metric_freq=1,
                 'verbose': False
             }
-            lgbt_params['bagging_seed'] = lgbt_params['bagging_seed'] + i + j
-            lgbt_params['feature_fraction_seed'] = lgbt_params['feature_fraction_seed'] + i + j
             clf = GBMRegressor(**lgbt_params)
             clf.fit(x_tr, y_tr)
 
@@ -98,10 +94,9 @@ xg_oof_train, xg_oof_test = get_oof()
 print("lgbt-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': train_ids, 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/lgbt_train.csv', index=False)
+oof_train.to_csv('oof/lgbt_train_1.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': test_ids, 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/lgbt_test.csv', index=False)
-
+oof_test.to_csv('oof/lgbt_test_1.csv', index=False)
