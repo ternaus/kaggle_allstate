@@ -241,7 +241,7 @@ def mungeskewed(train, test, numeric_feats):
     return train_test, ntrain
 
 
-def fancy(shift=200):
+def fancy(shift=200, quadratic=False):
     """
     From https://www.kaggle.com/modkzs/allstate-claims-severity/lexical-encoding-feature-comb/code
     :param shift:
@@ -255,12 +255,13 @@ def fancy(shift=200):
 
     joined, ntrain = mungeskewed(train, test, numeric_feats)
 
-    # Adding quadratic features
-    for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
-        feat = comb[0] + "_" + comb[1]
+    if quadratic:
+        # Adding quadratic features
+        for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
+            feat = comb[0] + "_" + comb[1]
 
-        joined[feat] = joined[comb[0]] + joined[comb[1]]
-        assert joined[feat].isnull().sum() == 0
+            joined[feat] = joined[comb[0]] + joined[comb[1]]
+            assert joined[feat].isnull().sum() == 0
 
     train = joined.iloc[:ntrain, :]
     test = joined.iloc[ntrain:, :]
@@ -273,7 +274,7 @@ def fancy(shift=200):
         if joined[column].nunique() == 1:
             to_drop += [column]
             continue
-        joined[column] = joined[column].fillna('unknown')
+        joined[column] = joined[column].fillna('UNKNOWN')
 
         encode_dict = {}
         for value in joined[column].unique():

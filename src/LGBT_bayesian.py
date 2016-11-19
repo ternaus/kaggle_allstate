@@ -41,27 +41,25 @@ def lgbt_evaluate(num_leaves, min_data_in_leaf, feature_fraction, bagging_fracti
         exec_path=os.path.expanduser('~/packages/LightGBM/lightgbm'),  # Change this to your LighGBM path
         config='',
         application='regression',
-        num_iterations=3000,
+        num_iterations=5000,
         learning_rate=0.01,
         num_leaves=int(round(num_leaves)),
-        tree_learner='serial',
+        # tree_learner='serial',
         num_threads=8,
         min_data_in_leaf=int(round(min_data_in_leaf)),
-        metric='l2',
+        metric='l1',
         feature_fraction=max(feature_fraction, 0),
         feature_fraction_seed=2016,
         bagging_fraction=max(bagging_fraction, 0),
-        bagging_freq=10,
+        bagging_freq=100,
         bagging_seed=2016,
-        early_stopping_round=50,
-        metric_freq=1,
+        early_stopping_round=25,
+        # metric_freq=1,
         verbose=False
     )
 
     kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).get_n_splits(X_train)
-    # cv = cross_val_score(lgbt, X_train, y_train, cv=kf, scoring=make_scorer(evalerror))
-    cv = cross_val_score(lgbt, X_train, y_train, cv=kf, scoring='neg_mean_squared_error')
-    print cv
+    cv = cross_val_score(lgbt, X_train, y_train, cv=kf, scoring=make_scorer(evalerror))
     return -cv.mean()
 
 
@@ -72,20 +70,20 @@ if __name__ == '__main__':
     init_points = 10
     shift = 200
 
-    # X_train, y_train, _, _, _, _ = clean_data.fancy(shift=200)
-    X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical(shift)
+    X_train, y_train, _, _, _, _ = clean_data.fancy(shift=200)
+    # X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical(shift)
     print X_train.shape, y_train.shape
 
-    # previous_points = pd.read_csv('params/parameters.csv')
+    previous_points = pd.read_csv('params/lgbt_params.csv')
 
-    lgbtBO = BayesianOptimization(lgbt_evaluate, {'num_leaves': (15, 500),
-                                                  'min_data_in_leaf': (15, 200),
-                                                  'feature_fraction': (0.3, 1),
-                                                  'bagging_fraction': (0.3, 1),
+    lgbtBO = BayesianOptimization(lgbt_evaluate, {'num_leaves': (100, 300),
+                                                  'min_data_in_leaf': (4, 20),
+                                                  'feature_fraction': (0.1, 0.6),
+                                                  'bagging_fraction': (0.5, 1),
                                                   # 'bagging_freq': (90, 110)
                                                 })
 
-    # xgbBO.initialize_df(previous_points)
+    lgbtBO.initialize_df(previous_points)
 
     lgbtBO.maximize(init_points=init_points, n_iter=num_iter)
 
@@ -96,5 +94,5 @@ if __name__ == '__main__':
     except:
         pass
 
-    # file_name = 'params/rf_parameters.csv'
-    # rfBO.points_to_csv(file_name)
+    file_name = 'params/lgbt_parameters_1.csv'
+    lgbtBO.points_to_csv(file_name)
