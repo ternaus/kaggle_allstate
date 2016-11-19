@@ -30,9 +30,8 @@ xgb_test_0 = pd.read_csv('oof/xgb_test.csv').rename(columns={'loss': 'xgb_loss_0
 xgb_train = pd.read_csv('oof/xgb_train_t.csv').rename(columns={'loss': 'xgb_loss'})
 xgb_test = pd.read_csv('oof/xgb_test_t.csv').rename(columns={'loss': 'xgb_loss'})
 
-xgb_train_1 = pd.read_csv('oof/xgb_train_t1.csv').rename(columns={'loss': 'xgb_loss_1'})
-xgb_test_1 = pd.read_csv('oof/xgb_test_t1.csv').rename(columns={'loss': 'xgb_loss_1'})
-
+xgb_train_1 = pd.read_csv('oof/xgb_train_t.csv').rename(columns={'loss': 'xgb_loss_1'})
+xgb_test_1 = pd.read_csv('oof/xgb_test_t.csv').rename(columns={'loss': 'xgb_loss_1'})
 
 xgb_train_2 = pd.read_csv('oof/xgb_train_t2.csv').rename(columns={'loss': 'xgb_loss_2'})
 xgb_test_2 = pd.read_csv('oof/xgb_test_t2.csv').rename(columns={'loss': 'xgb_loss_2'})
@@ -57,9 +56,16 @@ et_test = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
 rf_train = pd.read_csv('oof/rf_train.csv').rename(columns={'loss': 'rf_loss'})
 rf_test = pd.read_csv('oof/rf_test.csv').rename(columns={'loss': 'rf_loss'})
 
+#
+# lr_train = pd.read_csv('oof/lr_train.csv').rename(columns={'loss': 'lr_loss'})
+# lr_test = pd.read_csv('oof/lr_test.csv').rename(columns={'loss': 'lr_loss'})
 
-lr_train = pd.read_csv('oof/lr_train.csv').rename(columns={'loss': 'lr_loss'})
-lr_test = pd.read_csv('oof/lr_test.csv').rename(columns={'loss': 'lr_loss'})
+lgbt_train = pd.read_csv('oof/lgbt_train.csv').rename(columns={'loss': 'lgbt_loss'})
+lgbt_test = pd.read_csv('oof/lgbt_test.csv').rename(columns={'loss': 'lgbt_loss'})
+
+lgbt_train_1 = pd.read_csv('oof/lgbt_train_1.csv').rename(columns={'loss': 'lgbt_loss_1'})
+lgbt_test_1 = pd.read_csv('oof/lgbt_test_1.csv').rename(columns={'loss': 'lgbt_loss_1'})
+
 
 knn_numeric_train = pd.read_csv('oof/knn_numeric_train.csv').rename(columns={'loss': 'knn_numeric_loss'})
 knn_numeric_test = pd.read_csv('oof/knn_numeric_test.csv').rename(columns={'loss': 'knn_numeric_loss'})
@@ -67,31 +73,35 @@ knn_numeric_test = pd.read_csv('oof/knn_numeric_test.csv').rename(columns={'loss
 
 X_train = (train[['id', 'loss']]
            .merge(xgb_train_0, on='id')
-           .merge(xgb_train_1, on='id')
-           # .merge(xgb_train_2, on='id')
            .merge(xgb_train, on='id')
+           .merge(xgb_train_1, on='id')
+            .merge(xgb_train_2, on='id')
            .merge(nn_train, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
-            # .merge(nn_train_4, on='id')
+            .merge(nn_train_4, on='id')
            .merge(et_train, on='id')
             .merge(rf_train, on='id')
            # .merge(lr_train, on='id')
+            .merge(lgbt_train, on='id')
+            .merge(lgbt_train_1, on='id')
            # .merge(knn_numeric_train, on='id')
            )
 
 X_test = (test[['id', 'cat1']]
           .merge(xgb_test_0, on='id')
-          .merge(xgb_test_1, on='id')
-            # .merge(xgb_test_2, on='id')
           .merge(xgb_test, on='id')
+          .merge(xgb_test_1, on='id')
+            .merge(xgb_test_2, on='id')
           .merge(nn_test, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
-        # .merge(nn_test_4, on='id')
+        .merge(nn_test_4, on='id')
           .merge(et_test, on='id')
           .merge(rf_test, on='id')
-          # .merge(lr_train, on='id')
+          # .merge(lr_test, on='id')
+          .merge(lgbt_test, on='id')
+          .merge(lgbt_test_1, on='id')
           # .merge(knn_numeric_test, on='id')
           .drop('cat1', 1))
 
@@ -116,7 +126,7 @@ num_rounds = 300000
 RANDOM_STATE = 2016
 
 
-parameters = {'alpha': [0, 0.01, 0.1, 1, 10, 50, 100, 150, 180, 190, 200, 205, 210, 220, 250, 300, 500]}
+parameters = {'alpha': [0, 0.001, 0.005, 0.01, 0.1, 1, 10, 50, 100, 150, 180, 190, 200, 205, 210, 220, 240, 250, 260, 300, 500, 800, 1000]}
 
 n_folds = 5
 kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).get_n_splits(X_train)
@@ -129,7 +139,7 @@ clf.fit(X_train, y_train)
 for i in clf.grid_scores_:
     print i
 
-lr = Ridge(fit_intercept=False, alpha=0)
+lr = Ridge(fit_intercept=False, alpha=0.001)
 lr.fit(X_train, y_train)
 
 test_pred = np.exp(lr.predict(X_test)) - shift
