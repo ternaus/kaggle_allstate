@@ -295,3 +295,8 @@ def fancy(shift=200, quadratic=False):
     y_mean = y_train.mean()
 
     return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
+
+
+def classes(y, bins):
+    hist, bin_edges = np.histogram(y, bins=bins)
+    return map(lambda x: np.searchsorted(bin_edges, x), y)
