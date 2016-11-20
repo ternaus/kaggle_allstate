@@ -45,7 +45,7 @@ def lgbt_evaluate(num_leaves, min_data_in_leaf, feature_fraction, bagging_fracti
         learning_rate=0.01,
         num_leaves=int(round(num_leaves)),
         # tree_learner='serial',
-        num_threads=8,
+        num_threads=4,
         min_data_in_leaf=int(round(min_data_in_leaf)),
         metric='l1',
         feature_fraction=max(feature_fraction, 0),
@@ -78,8 +78,8 @@ if __name__ == '__main__':
 
     lgbtBO = BayesianOptimization(lgbt_evaluate, {'num_leaves': (100, 300),
                                                   'min_data_in_leaf': (4, 20),
-                                                  'feature_fraction': (0.1, 0.6),
-                                                  'bagging_fraction': (0.5, 1),
+                                                  'feature_fraction': (0.2, 1),
+                                                  'bagging_fraction': (0.9, 1),
                                                   # 'bagging_freq': (90, 110)
                                                 })
 
@@ -94,5 +94,5 @@ if __name__ == '__main__':
     except:
         pass
 
-    file_name = 'params/lgbt_parameters_1.csv'
+    file_name = 'params/lgbt_params_1.csv'
     lgbtBO.points_to_csv(file_name)
