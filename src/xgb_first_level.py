@@ -5,7 +5,7 @@ import sys
 sys.path += ['/home/vladimir/packages/xgboost/python-package']
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from pylab import *
 from tqdm import tqdm
 from sklearn.utils import shuffle
@@ -60,7 +60,9 @@ n_folds = 5
 num_train = len(y_train)
 num_test = test.shape[0]
 
-kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
+kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
+
+classes = clean_data.classes(y_train, bins=100)
 
 
 class XgbWrapper(object):
@@ -79,13 +81,15 @@ class XgbWrapper(object):
     def predict(self, x):
         return self.gbdt.predict(xgb.DMatrix(x))
 
+
 nbags = 2
+
 
 def get_oof(clf):
     pred_oob = np.zeros(X_train.shape[0])
     pred_test = np.zeros(X_test.shape[0])
 
-    for i, (train_index, test_index) in enumerate(kf.split(X_train)):
+    for i, (train_index, test_index) in enumerate(kf.split(classes, classes)):
         print "Fold = ", i
         x_tr = X_train[train_index]
         y_tr = y_train[train_index]
@@ -116,10 +120,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/xgb_train_t3.csv', index=False)
+oof_train.to_csv('oof/xgb_train_t4.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/xgb_test_t3.csv', index=False)
+oof_test.to_csv('oof/xgb_test_t4.csv', index=False)
 
