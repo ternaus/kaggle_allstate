@@ -56,6 +56,16 @@ nn_train_4 = pd.read_csv('oof/NN_train_4.csv').rename(columns={'loss': 'nn_loss_
 nn_test_4 = pd.read_csv('oof/NN_test_4.csv').rename(columns={'loss': 'nn_loss_4'})
 
 
+nn_train_p1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_p1'})
+nn_test_p1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_p1'})
+
+nn_train_p2 = pd.read_csv('oof/NN_train_p2.csv').rename(columns={'loss': 'nn_loss_p3'})
+nn_test_p2 = pd.read_csv('oof/NN_test_p2.csv').rename(columns={'loss': 'nn_loss_p3'})
+
+nn_train_p3 = pd.read_csv('oof/NN_train_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
+nn_test_p3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
+
+
 et_train = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
 et_test = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
 
@@ -88,6 +98,9 @@ X_train = (train[['id', 'loss']]
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
             .merge(nn_train_4, on='id')
+            .merge(nn_train_p1, on='id')
+            .merge(nn_train_p2, on='id')
+            .merge(nn_train_p3, on='id')
            .merge(et_train, on='id')
             .merge(rf_train, on='id')
            # .merge(lr_train, on='id')
@@ -107,6 +120,9 @@ X_test = (test[['id', 'cat1']]
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
           .merge(nn_test_4, on='id')
+          .merge(nn_test_p1, on='id')
+            .merge(nn_test_p2, on='id')
+            .merge(nn_test_p3, on='id')
           .merge(et_test, on='id')
           .merge(rf_test, on='id')
           # .merge(lr_test, on='id')
@@ -115,7 +131,7 @@ X_test = (test[['id', 'cat1']]
           # .merge(knn_numeric_test, on='id')
           .drop('cat1', 1))
 
-shift = 200
+shift = 400
 
 y_train = np.log(X_train['loss'] + shift)
 
