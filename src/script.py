@@ -63,14 +63,15 @@ def batch_generatorp(X, batch_size, shuffle):
 
 def nn_model():
     model = Sequential()
+    # model.add(BatchNormalization(input_shape=(xtrain.shape[1], 1)))
     model.add(Dense(400, init='he_normal', activation='elu', input_dim=xtrain.shape[1]))
-    # model.add(BatchNormalization())
-    model.add(Dropout(0.6))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.4))
     model.add(Dense(200, init='he_normal', activation='elu'))
-    # model.add(BatchNormalization())
-    # model.add(Dropout(0.4))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.4))
     model.add(Dense(50, init='he_normal', activation='elu'))
-    # model.add(BatchNormalization())
+    model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))
     return model
@@ -111,8 +112,8 @@ for i, (inTr, inTe) in enumerate(kf.split(classes, classes)):
     for j in range(nbags):
         model = nn_model()
         model.compile(loss='mae',
-                      optimizer='adadelta',
-                      # optimizer=Nadam(lr=1e-3),
+                      # optimizer='adadelta',
+                      optimizer=Nadam(lr=1e-3),
                       metrics=[f_eval]
                       )
 
@@ -131,8 +132,8 @@ for i, (inTr, inTe) in enumerate(kf.split(classes, classes)):
 
         model.load_weights('keras_cache/keras-regressor-' + str(i + 1) + str(j) + '.hdf5')
         model.compile(loss='mae',
-                      optimizer='adadelta',
-                      # optimizer=Nadam(lr=1e-3),
+                      # optimizer='adadelta',
+                      optimizer=Nadam(lr=1e-3),
                       metrics=[f_eval])
 
         pred += np.exp(model.predict_generator(generator=batch_generatorp(xte, 800, False), val_samples=xte.shape[0])[:, 0] + y_mean)
@@ -146,12 +147,12 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train + y_mean), pred_oob + y
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob - shift})
-df.to_csv('oof/NN_train_p1.csv', index=False)
+df.to_csv('oof/NN_train_p2.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test - shift})
-df.to_csv('oof/NN_test_p1.csv', index=False)
+df.to_csv('oof/NN_test_p2.csv', index=False)
 
 
 
