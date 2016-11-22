@@ -30,7 +30,6 @@ import clean_data
 def eval_f(x, y):
     return mean_absolute_error(np.exp(x), np.exp(y))
 
-
 train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
 
@@ -52,6 +51,12 @@ xgb_test_3 = pd.read_csv('oof/xgb_test_t3.csv').rename(columns={'loss': 'xgb_los
 xgb_train_4 = pd.read_csv('oof/xgb_train_t4.csv').rename(columns={'loss': 'xgb_loss_4'})
 xgb_test_4 = pd.read_csv('oof/xgb_test_t4.csv').rename(columns={'loss': 'xgb_loss_4'})
 
+xgb_train_5 = pd.read_csv('oof/xgb_train_t5.csv').rename(columns={'loss': 'xgb_loss_5'})
+xgb_test_5 = pd.read_csv('oof/xgb_test_t5.csv').rename(columns={'loss': 'xgb_loss_5'})
+
+xgb_train_6 = pd.read_csv('oof/xgb_train_t6.csv').rename(columns={'loss': 'xgb_loss_6'})
+xgb_test_6 = pd.read_csv('oof/xgb_test_t6.csv').rename(columns={'loss': 'xgb_loss_6'})
+
 nn_train = pd.read_csv('oof/NN_train.csv').rename(columns={'loss': 'nn_loss'})
 nn_test = pd.read_csv('oof/NN_test.csv').rename(columns={'loss': 'nn_loss'})
 
@@ -64,6 +69,18 @@ nn_test_2 = pd.read_csv('oof/NN_test_2.csv').rename(columns={'loss': 'nn_loss_1'
 nn_train_4 = pd.read_csv('oof/NN_train_4.csv').rename(columns={'loss': 'nn_loss_4'})
 nn_test_4 = pd.read_csv('oof/NN_test_4.csv').rename(columns={'loss': 'nn_loss_4'})
 
+
+nn_train_p1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_p1'})
+nn_test_p1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_p1'})
+
+nn_train_p2 = pd.read_csv('oof/NN_train_p2.csv').rename(columns={'loss': 'nn_loss_p3'})
+nn_test_p2 = pd.read_csv('oof/NN_test_p2.csv').rename(columns={'loss': 'nn_loss_p3'})
+
+nn_train_p3 = pd.read_csv('oof/NN_train_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
+nn_test_p3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
+
+nn_train_p4 = pd.read_csv('oof/NN_train_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
+nn_test_p4 = pd.read_csv('oof/NN_test_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
 
 et_train = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
 et_test = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
@@ -93,10 +110,16 @@ X_train = (train[['id', 'loss']]
            #  .merge(xgb_train_2, on='id')
             .merge(xgb_train_3, on='id')
             .merge(xgb_train_4, on='id')
+            .merge(xgb_train_5, on='id')
+            .merge(xgb_train_6, on='id')
            .merge(nn_train, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
             .merge(nn_train_4, on='id')
+            .merge(nn_train_p1, on='id')
+            .merge(nn_train_p2, on='id')
+            .merge(nn_train_p3, on='id')
+            .merge(nn_train_p4, on='id')
            .merge(et_train, on='id')
             .merge(rf_train, on='id')
            # .merge(lr_train, on='id')
@@ -111,11 +134,17 @@ X_test = (test[['id', 'cat1']]
           # .merge(xgb_test_1, on='id')
           #   .merge(xgb_test_2, on='id')
           .merge(xgb_test_3, on='id')
-        .merge(xgb_test_4, on='id')
+            .merge(xgb_test_4, on='id')
+            .merge(xgb_test_5, on='id')
+            .merge(xgb_test_6, on='id')
           .merge(nn_test, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
           .merge(nn_test_4, on='id')
+          .merge(nn_test_p1, on='id')
+            .merge(nn_test_p2, on='id')
+            .merge(nn_test_p3, on='id')
+            .merge(nn_test_p4, on='id')
           .merge(et_test, on='id')
           .merge(rf_test, on='id')
           # .merge(lr_test, on='id')
@@ -135,9 +164,9 @@ X_test_id = X_test['id'].values
 X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.log(x + shift)).values
 X_test = X_test.drop('id', 1).applymap(lambda x: np.log(x + shift)).values
 
-X_train_mean = X_train.mean(axis=0)
-
-print X_train_mean
+# X_train_mean = X_train.mean(axis=0)
+#
+# print X_train_mean
 # print len(X_train_mean)
 
 # X_train -= X_train.mean()
@@ -152,7 +181,7 @@ RANDOM_STATE = 2016
 
 def nn_model():
     model = Sequential()
-    model.add(Dense(5, input_dim=X_train.shape[1], init='he_normal', activation='elu'))
+    model.add(Dense(10, input_dim=X_train.shape[1], init='he_normal', activation='elu'))
     # model.add(Dropout(0.5))
     # model.add(Dense(100, init='he_normal', activation='elu'))
     model.add(Dense(1, init='he_normal'))
@@ -167,13 +196,14 @@ scores = []
 
 classes = clean_data.classes(y_train, bins=100)
 
+
 def eval_f(x, y):
     return mean_absolute_error(np.exp(x), np.exp(y))
 
 pred_oob = np.zeros(X_train.shape[0])
 pred_test = np.zeros(X_test.shape[0])
 
-nbags = 1
+nbags = 5
 
 
 for i, (inTr, inTe) in enumerate(KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).split(classes, classes)):
@@ -218,9 +248,9 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train), pred_oob))
 
 # train predictions
 df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob - shift})
-df.to_csv('oof2/NN_train.csv', index=False)
+df.to_csv('oof2/NN_train_1.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': X_test_id, 'loss': pred_test - shift})
-df.to_csv('oof2/NN_test.csv', index=False)
+df.to_csv('oof2/NN_test_1.csv', index=False)
