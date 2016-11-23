@@ -70,16 +70,16 @@ def nn_model():
     model.add(Dense(200, init='he_normal'))
     model.add(PReLU())
     model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.4))
     model.add(Dense(50, init='he_normal'))
     model.add(PReLU())
-    model.add(BatchNormalization())
+    # model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))
     return model
 
 
-shift = 0
+shift = 200
 xtrain, y_train, xtest, y_mean, id_test, id_train = clean_data.one_hot_categorical(shift=shift, subtract_mean=True, quadratic=False)
 
 print xtrain.shape, y_train.shape
@@ -99,7 +99,7 @@ kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 classes = clean_data.classes(y_train, bins=100)
 # train models
 i = 0
-nbags = 20
+nbags = 5
 nepochs = 2000
 batch_size = 2**7
 pred_oob = np.zeros(xtrain.shape[0])
@@ -122,7 +122,7 @@ for i, (inTr, inTe) in enumerate(kf.split(classes, classes)):
         callbacks = [
             ModelCheckpoint('keras_cache/keras-regressor-' + str(i + 1) + str(j) + '.hdf5', monitor='val_loss',
                             save_best_only=True, verbose=0),
-            EarlyStopping(patience=25)
+            EarlyStopping(patience=25, monitor='val_f_eval')
         ]
 
         model.fit_generator(generator=batch_generator(xtr, ytr, batch_size, True),
@@ -149,10 +149,10 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train + y_mean), pred_oob + y
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob - shift})
-df.to_csv('oof/NN_train_p4.csv', index=False)
+df.to_csv('oof/NN_train_p5.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test - shift})
-df.to_csv('oof/NN_test_p4.csv', index=False)
+df.to_csv('oof/NN_test_p5.csv', index=False)
 
