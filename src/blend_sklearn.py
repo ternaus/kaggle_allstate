@@ -12,7 +12,7 @@ sys.path += ['/home/vladimir/packages/xgboost/python-package']
 
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import StratifiedKFold
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import Ridge
 from sklearn.metrics import make_scorer
 from pylab import *
@@ -43,6 +43,16 @@ xgb_test_3 = pd.read_csv('oof/xgb_test_t3.csv').rename(columns={'loss': 'xgb_los
 xgb_train_4 = pd.read_csv('oof/xgb_train_t4.csv').rename(columns={'loss': 'xgb_loss_4'})
 xgb_test_4 = pd.read_csv('oof/xgb_test_t4.csv').rename(columns={'loss': 'xgb_loss_4'})
 
+xgb_train_5 = pd.read_csv('oof/xgb_train_t5.csv').rename(columns={'loss': 'xgb_loss_5'})
+xgb_test_5 = pd.read_csv('oof/xgb_test_t5.csv').rename(columns={'loss': 'xgb_loss_5'})
+
+xgb_train_6 = pd.read_csv('oof/xgb_train_t6.csv').rename(columns={'loss': 'xgb_loss_6'})
+xgb_test_6 = pd.read_csv('oof/xgb_test_t6.csv').rename(columns={'loss': 'xgb_loss_6'})
+
+xgb_train_7 = pd.read_csv('oof/xgb_train_t7.csv').rename(columns={'loss': 'xgb_loss_7'})
+xgb_test_7 = pd.read_csv('oof/xgb_test_t7.csv').rename(columns={'loss': 'xgb_loss_7'})
+
+
 nn_train = pd.read_csv('oof/NN_train.csv').rename(columns={'loss': 'nn_loss'})
 nn_test = pd.read_csv('oof/NN_test.csv').rename(columns={'loss': 'nn_loss'})
 
@@ -64,6 +74,12 @@ nn_test_p2 = pd.read_csv('oof/NN_test_p2.csv').rename(columns={'loss': 'nn_loss_
 
 nn_train_p3 = pd.read_csv('oof/NN_train_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
 nn_test_p3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
+
+nn_train_p4 = pd.read_csv('oof/NN_train_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
+nn_test_p4 = pd.read_csv('oof/NN_test_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
+
+nn_train_p5 = pd.read_csv('oof/NN_train_p5.csv').rename(columns={'loss': 'nn_loss_p5'})
+nn_test_p5 = pd.read_csv('oof/NN_test_p5.csv').rename(columns={'loss': 'nn_loss_p5'})
 
 
 et_train = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
@@ -87,6 +103,8 @@ knn_numeric_train = pd.read_csv('oof/knn_numeric_train.csv').rename(columns={'lo
 knn_numeric_test = pd.read_csv('oof/knn_numeric_test.csv').rename(columns={'loss': 'knn_numeric_loss'})
 
 
+
+
 X_train = (train[['id', 'loss']]
            .merge(xgb_train_0, on='id')
            .merge(xgb_train, on='id')
@@ -94,6 +112,9 @@ X_train = (train[['id', 'loss']]
            #  .merge(xgb_train_2, on='id')
             .merge(xgb_train_3, on='id')
             .merge(xgb_train_4, on='id')
+            .merge(xgb_train_5, on='id')
+            .merge(xgb_train_6, on='id')
+            .merge(xgb_train_7, on='id')
            .merge(nn_train, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
@@ -101,6 +122,8 @@ X_train = (train[['id', 'loss']]
             .merge(nn_train_p1, on='id')
             .merge(nn_train_p2, on='id')
             .merge(nn_train_p3, on='id')
+            .merge(nn_train_p4, on='id')
+            .merge(nn_train_p5, on='id')
            .merge(et_train, on='id')
             .merge(rf_train, on='id')
            # .merge(lr_train, on='id')
@@ -116,6 +139,9 @@ X_test = (test[['id', 'cat1']]
           #   .merge(xgb_test_2, on='id')
           .merge(xgb_test_3, on='id')
             .merge(xgb_test_4, on='id')
+            .merge(xgb_test_5, on='id')
+            .merge(xgb_test_6, on='id')
+            .merge(xgb_test_7, on='id')
           .merge(nn_test, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
@@ -123,6 +149,8 @@ X_test = (test[['id', 'cat1']]
           .merge(nn_test_p1, on='id')
             .merge(nn_test_p2, on='id')
             .merge(nn_test_p3, on='id')
+            .merge(nn_test_p4, on='id')
+            .merge(nn_test_p5, on='id')
           .merge(et_test, on='id')
           .merge(rf_test, on='id')
           # .merge(lr_test, on='id')
@@ -130,6 +158,30 @@ X_test = (test[['id', 'cat1']]
           # .merge(lgbt_test_1, on='id')
           # .merge(knn_numeric_test, on='id')
           .drop('cat1', 1))
+
+# xgb_coef = 1.006
+# nn_coef = 1.019
+#
+# X_train['xgb_loss_0'] *= xgb_coef
+# X_train['xgb_loss_1'] *= xgb_coef
+# X_train['xgb_loss_2'] *= xgb_coef
+# X_train['xgb_loss_3'] *= xgb_coef
+# X_train['xgb_loss_4'] *= xgb_coef
+# X_train['xgb_loss_5'] *= xgb_coef
+# X_train['xgb_loss_6'] *= xgb_coef
+# X_train['xgb_loss'] *= xgb_coef
+#
+#
+# X_test['xgb_loss_0'] *= xgb_coef
+# X_test['xgb_loss_1'] *= xgb_coef
+# X_test['xgb_loss_2'] *= xgb_coef
+# X_test['xgb_loss_3'] *= xgb_coef
+# X_test['xgb_loss_4'] *= xgb_coef
+# X_test['xgb_loss_5'] *= xgb_coef
+# X_test['xgb_loss_6'] *= xgb_coef
+# X_test['xgb_loss'] *= xgb_coef
+
+
 
 shift = 400
 
