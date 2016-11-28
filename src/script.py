@@ -70,16 +70,16 @@ def nn_model():
     model.add(Dense(200, init='he_normal'))
     model.add(PReLU())
     model.add(BatchNormalization())
-    model.add(Dropout(0.4))
+    model.add(Dropout(0.2))
     model.add(Dense(50, init='he_normal'))
     model.add(PReLU())
-    # model.add(BatchNormalization())
+    model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))
     return model
 
 
-shift = 200
+shift = 350
 xtrain, y_train, xtest, y_mean, id_test, id_train = clean_data.one_hot_categorical(shift=shift, subtract_mean=True, quadratic=False)
 
 print xtrain.shape, y_train.shape
@@ -99,7 +99,7 @@ kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 classes = clean_data.classes(y_train, bins=100)
 # train models
 i = 0
-nbags = 5
+nbags = 10
 nepochs = 2000
 batch_size = 2**7
 pred_oob = np.zeros(xtrain.shape[0])
@@ -149,10 +149,10 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train + y_mean), pred_oob + y
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob - shift})
-df.to_csv('oof/NN_train_p5.csv', index=False)
+df.to_csv('oof/NN_train_p6.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test - shift})
-df.to_csv('oof/NN_test_p5.csv', index=False)
+df.to_csv('oof/NN_test_p6.csv', index=False)
 
