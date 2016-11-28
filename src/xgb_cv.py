@@ -55,7 +55,7 @@ test = joined[joined['loss'].isnull()]
 shift = 200
 
 y = np.log(train['loss'] + shift)
-# y = train['loss']
+# y_train = train['loss']
 
 ids = test['id']
 X = train.drop(['loss', 'id'], 1)
@@ -102,14 +102,14 @@ for (inTr, inTe) in folds:
     y_val = y.values[inTe]
     print X_train.shape, y_train.shape, X_val.shape, y_val.shape
 
-    # X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1, random_state=RANDOM_STATE)
+    # X_train, X_val, y_train, y_val = train_test_split(X, y_train, test_size=0.1, random_state=RANDOM_STATE)
 
     # print X_train.shape, X_val.shape, y_train.shape, y_val.shape
     #
     # print X_train.shape, y_train.shape
 
     xgtrain = xgb.DMatrix(X_train, label=y_train)
-    # xgtrain = xgb.DMatrix(X, label=y)
+    # xgtrain = xgb.DMatrix(X, label=y_train)
 
     xgval = xgb.DMatrix(X_val, label=y_val)
     xgtest = xgb.DMatrix(X_test.values)

@@ -61,6 +61,7 @@ et_params = {
     'min_samples_leaf': 2,
 }
 
+
 class SklearnWrapper(object):
     def __init__(self, clf, seed=0, params=None):
         params['random_state'] = seed

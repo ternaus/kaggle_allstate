@@ -121,24 +121,24 @@ def oof_categorical(shift=200, scale=False, subtract_min=False):
 
 
 def filter_cat(joined, train, test, column):
-    if train[column].nunique() != test[column].nunique():
-        # Let's find extra categories...
-        set_train = set(train[column].unique())
-        set_test = set(test[column].unique())
-        remove_train = set_train - set_test
-        remove_test = set_test - set_train
 
-        remove = remove_train.union(remove_test)
-        print column, remove
+    # Let's find extra categories...
+    set_train = set(train[column].unique())
+    set_test = set(test[column].unique())
+    remove_train = set_train - set_test
+    remove_test = set_test - set_train
 
-        # print column, remove
+    remove = remove_train.union(remove_test)
+    # print column, remove
 
-        def helper(x):
-            if x in remove:
-                return np.nan
-            return x
+    def helper(x):
+        if x in remove:
+            return np.nan
+        return x
 
+    if len(remove) != 0:
         return joined[column].apply(lambda x: helper(x), 1)
+
     return joined[column]
 
 
@@ -164,6 +164,11 @@ def one_hot_categorical(shift=0, subtract_mean=False, quadratic=False):
     # stack train test
     ntrain = train.shape[0]
     joined = pd.concat((train, test), axis=0)
+
+    joined_t = joined.copy()
+    cats_old = [x for x in joined_t.columns if 'cat' in x]
+    for column in cats_old:
+        joined_t[column] = pd.factorize(joined_t[column], sort=True)[0]
 
     if quadratic:
         numeric_feats = [x for x in train.columns if 'cont' in x]
@@ -201,6 +206,14 @@ def one_hot_categorical(shift=0, subtract_mean=False, quadratic=False):
         tmp = csr_matrix(dummy)
         sparse_data.append(tmp)
 
+    joined['sum_of_cats_cont'] = (joined_t[cats_old] == 0).sum(axis=1)
+    joined['sum_of_cats_0_cont'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+
+    print joined['sum_of_cats_cont'].value_counts()
+    print
+    print joined['sum_of_cats_0_cont'].value_counts()
+    joined = joined.fillna(0)
+
     f_num = [f for f in joined.columns if 'cont' in f]
     scaler = StandardScaler()
     tmp = csr_matrix(scaler.fit_transform(joined[f_num]))
@@ -232,7 +245,7 @@ def mungeskewed(train, test, numeric_feats):
     print
     print("Skew in numeric features:")
     print(skewed_feats)
-    skewed_feats = skewed_feats[skewed_feats > 0.25]
+    skewed_feats = skewed_feats[np.abs(skewed_feats) > 0.25]
     skewed_feats = skewed_feats.index
 
     for feats in skewed_feats:
@@ -241,7 +254,7 @@ def mungeskewed(train, test, numeric_feats):
     return train_test, ntrain
 
 
-def fancy(shift=200, quadratic=False):
+def fancy(shift=200, quadratic=False, truncate=False, add_zero_count=True):
     """
     From https://www.kaggle.com/modkzs/allstate-claims-severity/lexical-encoding-feature-comb/code
     :param shift:
@@ -250,10 +263,18 @@ def fancy(shift=200, quadratic=False):
     COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
         ',')
     train = pd.read_csv('../data/train.csv')
+    if truncate:
+        train = train[(train['loss'] > 200) & (train['loss'] < 30000)]
+
     test = pd.read_csv('../data/test.csv')
     numeric_feats = [x for x in train.columns if 'cont' in x]
 
     joined, ntrain = mungeskewed(train, test, numeric_feats)
+
+    joined_t = joined.copy()
+    cats_old = [x for x in joined_t.columns if 'cat' in x]
+    for column in cats_old:
+        joined_t[column] = pd.factorize(joined_t[column], sort=True)[0]
 
     if quadratic:
         # Adding quadratic features
@@ -268,6 +289,7 @@ def fancy(shift=200, quadratic=False):
 
     # Encoding categorical features
     cats = [x for x in joined.columns if 'cat' in x]
+
     to_drop = []
     for column in tqdm(cats):
         joined[column] = filter_cat(joined, train, test, column)
@@ -285,6 +307,10 @@ def fancy(shift=200, quadratic=False):
 
     print 'dropping = ', to_drop
     joined = joined.drop(to_drop, 1)
+
+    joined['sum_of_cats_0'] = (joined_t[cats_old] == 0).sum(axis=1)
+    joined['sum_of_cats_0_71'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+    joined = joined.fillna(0)
 
     print 'scaling'
     ss = StandardScaler()

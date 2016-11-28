@@ -82,6 +82,9 @@ nn_test_p3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_
 nn_train_p4 = pd.read_csv('oof/NN_train_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
 nn_test_p4 = pd.read_csv('oof/NN_test_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
 
+nn_train_p5 = pd.read_csv('oof/NN_train_p5.csv').rename(columns={'loss': 'nn_loss_p5'})
+nn_test_p5 = pd.read_csv('oof/NN_test_p5.csv').rename(columns={'loss': 'nn_loss_p5'})
+
 et_train = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
 et_test = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
 
@@ -120,11 +123,12 @@ X_train = (train[['id', 'loss']]
             .merge(nn_train_p2, on='id')
             .merge(nn_train_p3, on='id')
             .merge(nn_train_p4, on='id')
+            .merge(nn_train_p5, on='id')
            .merge(et_train, on='id')
             .merge(rf_train, on='id')
            # .merge(lr_train, on='id')
-           #  .merge(lgbt_train, on='id')
-           #  .merge(lgbt_train_1, on='id')
+            .merge(lgbt_train, on='id')
+            .merge(lgbt_train_1, on='id')
            # .merge(knn_numeric_train, on='id')
            )
 
@@ -145,11 +149,12 @@ X_test = (test[['id', 'cat1']]
             .merge(nn_test_p2, on='id')
             .merge(nn_test_p3, on='id')
             .merge(nn_test_p4, on='id')
+            .merge(nn_test_p5, on='id')
           .merge(et_test, on='id')
           .merge(rf_test, on='id')
           # .merge(lr_test, on='id')
-          # .merge(lgbt_test, on='id')
-          # .merge(lgbt_test_1, on='id')
+          .merge(lgbt_test, on='id')
+          .merge(lgbt_test_1, on='id')
           # .merge(knn_numeric_test, on='id')
           .drop('cat1', 1))
 
@@ -223,7 +228,7 @@ for i, (inTr, inTe) in enumerate(KFold(n_folds, shuffle=True, random_state=RANDO
         callbacks = [
             ModelCheckpoint('keras_cache/keras-regressor-' + str(i + 1) + '.hdf5', monitor='val_loss',
                             save_best_only=True, verbose=0),
-            EarlyStopping(patience=15)
+            EarlyStopping(patience=15, monitor='val_f_eval')
         ]
         model.fit(xtr, ytr,
                   validation_data=(xte, yte),
@@ -248,9 +253,9 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train), pred_oob))
 
 # train predictions
 df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob - shift})
-df.to_csv('oof2/NN_train_1.csv', index=False)
+df.to_csv('oof2/NN_train_2.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': X_test_id, 'loss': pred_test - shift})
-df.to_csv('oof2/NN_test_1.csv', index=False)
+df.to_csv('oof2/NN_test_2.csv', index=False)

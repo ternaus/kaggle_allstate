@@ -121,10 +121,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/xgb_train_t7.csv', index=False)
+oof_train.to_csv('oof/xgb_train_t8.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/xgb_test_t7.csv', index=False)
+oof_test.to_csv('oof/xgb_test_t8.csv', index=False)
 

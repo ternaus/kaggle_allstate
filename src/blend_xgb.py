@@ -11,11 +11,11 @@ import sys
 sys.path += ['/home/vladimir/packages/xgboost/python-package']
 
 import xgboost as xgb
+import numpy as np
 
 from sklearn.metrics import mean_absolute_error
-from sklearn.cross_validation import KFold
+from sklearn.utils import shuffle
 
-from pylab import *
 
 def evalerror(preds, dtrain):
     labels = dtrain.get_label()
@@ -178,7 +178,7 @@ params = {
     # 'booster': 'dart',
     # 'rate_drop': 0.1,
     # 'scale_pos_weight':  1,
-    'min_child_weight': 100,
+    'min_child_weight': 10,
     'eta': 0.01,
     'colsample_bytree': 0.75,
     'max_depth': 5,
@@ -208,6 +208,13 @@ best_nrounds = res.shape[0] - 1
 cv_mean = res.iloc[-1, 0]
 cv_std = res.iloc[-1, 1]
 print('CV-Mean: {0}+{1}'.format(cv_mean, cv_std))
+
+
+
+
+
+
+
 
 model = xgb.train(params, xgtrain, int(best_nrounds / (1 - 1.0/5)), feval=evalerror)
 

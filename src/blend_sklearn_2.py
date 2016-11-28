@@ -45,7 +45,7 @@ X_train = (train[['id', 'loss']]
            .merge(nn_train, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
-            # .merge(xgb_train, on='id')
+           .merge(xgb_train, on='id')
            .merge(lr_train, on='id')
            )
 
@@ -53,11 +53,11 @@ X_test = (test[['id', 'cat1']]
           .merge(nn_test, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
-        # .merge(xgb_test, on='id')
+          .merge(xgb_test, on='id')
           .merge(lr_test, on='id')
           .drop('cat1', 1))
 
-shift = 400
+shift = 350
 
 y_train = np.log(X_train['loss'] + shift)
 
@@ -79,14 +79,15 @@ num_rounds = 300000
 RANDOM_STATE = 2016
 
 
-parameters = {'alpha': [0, 0.001, 0.005, 0.01, 0.1, 1, 10, 50, 100, 150, 180, 190, 200, 205, 210, 220, 240, 250, 260, 300, 400, 500, 750, 800, 850, 1000,
+parameters = {'alpha': [0, 0.001, 0.005, 0.01, 0.1, 1, 10, 50, 100, 150, 180, 190, 200, 205, 210, 220, 240, 250, 260, 300, 400, 500, 750, 800, 830, 850, 880, 1000,
                         1100, 1200, 1300, 1400, 1500, 2000, 3000, 5000]}
 
 n_folds = 5
 
 kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 
-lr = Ridge(fit_intercept=False)
+fit_intercept = False
+lr = Ridge(fit_intercept=fit_intercept)
 clf = GridSearchCV(lr, parameters, n_jobs=-1, cv=kf.get_n_splits(X_train, y_train), scoring=make_scorer(eval_f), iid=False)
 
 clf.fit(X_train, y_train)
@@ -132,7 +133,8 @@ def get_oof(clf):
 
     return pred_oob, pred_test
 
-lr = Ridge(fit_intercept=False, alpha=300)
+# lr = Ridge(fit_intercept=False, alpha=1100)
+lr = Ridge(fit_intercept=fit_intercept, alpha=1100)
 
 lr_oof_train, lr_oof_test = get_oof(lr)
 

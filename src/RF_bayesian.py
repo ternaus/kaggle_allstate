@@ -56,7 +56,7 @@ if __name__ == '__main__':
     init_points = 10
     shift = 0
 
-    X_train, y_train, _, _ = clean_data.label_encode(shift=200)
+    X_train, y_train, _, _, _, _ = clean_data.fancy(shift=200)
     print X_train.shape, y_train.shape
 
     # previous_points = pd.read_csv('params/parameters.csv')
