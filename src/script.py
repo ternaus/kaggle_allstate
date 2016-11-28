@@ -90,7 +90,7 @@ xtrain = csr_matrix(xtrain)
 xtest = csr_matrix(xtest)
 
 # cv-folds
-n_folds = 5
+n_folds = 10
 
 RANDOM_STATE = 2016
 
@@ -99,7 +99,7 @@ kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 classes = clean_data.classes(y_train, bins=100)
 # train models
 i = 0
-nbags = 10
+nbags = 5
 nepochs = 2000
 batch_size = 2**7
 pred_oob = np.zeros(xtrain.shape[0])
@@ -149,10 +149,10 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train + y_mean), pred_oob + y
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob - shift})
-df.to_csv('oof/NN_train_p6.csv', index=False)
+df.to_csv('oof/NN_train_p1.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test - shift})
-df.to_csv('oof/NN_test_p6.csv', index=False)
+df.to_csv('oof/NN_test_p1.csv', index=False)
 
