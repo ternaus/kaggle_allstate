@@ -19,7 +19,7 @@ joined = pd.concat([train, test])
 
 def logregobj(preds, dtrain):
     labels = dtrain.get_label()
-    con = 2
+    con = 0.7
     x = preds - labels
     den = np.abs(x) + con
     grad = con * x / den
@@ -120,10 +120,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/xgb_train_s3.csv', index=False)
+oof_train.to_csv('oof/xgb_train_s4.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/xgb_test_s3.csv', index=False)
+oof_test.to_csv('oof/xgb_test_s4.csv', index=False)
 
