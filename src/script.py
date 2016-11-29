@@ -70,10 +70,10 @@ def nn_model():
     model.add(Dense(200, init='he_normal'))
     model.add(PReLU())
     model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.4))
     model.add(Dense(50, init='he_normal'))
     model.add(PReLU())
-    model.add(BatchNormalization())
+    # model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))
     return model
@@ -149,10 +149,10 @@ print('Total - MAE:', mean_absolute_error(np.exp(y_train + y_mean), pred_oob + y
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob - shift})
-df.to_csv('oof/NN_train_p1.csv', index=False)
+df.to_csv('oof/NN_train_p2.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test - shift})
-df.to_csv('oof/NN_test_p1.csv', index=False)
+df.to_csv('oof/NN_test_p2.csv', index=False)
 
