@@ -17,11 +17,6 @@ test['loss'] = np.nan
 joined = pd.concat([train, test])
 
 
-def evalerror(preds, dtrain):
-    labels = dtrain.get_label()
-    return 'mae', mean_absolute_error(np.exp(preds), np.exp(labels))
-
-
 def logregobj(preds, dtrain):
     labels = dtrain.get_label()
     con = 2
@@ -30,13 +25,16 @@ def logregobj(preds, dtrain):
     hess = con**2 / (np.abs(x) + con)**2
     return grad, hess
 
-shift = 200
 
-X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy(shift, quadratic=True)
+def evalerror(preds, dtrain):
+    labels = dtrain.get_label()
+    return 'mae', mean_absolute_error(preds**4, labels**4)
+
+
+X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=True)
 
 X_train = X_train.values
 X_test = X_test.values
-y_train = y_train.values
 
 print X_train.shape, X_test.shape
 
@@ -77,7 +75,7 @@ class XgbWrapper(object):
         self.param['seed'] = seed
         dval = xgb.DMatrix(x_val, label=y_val)
         watchlist = [(dtrain, 'train'), (dval, 'val')]
-        self.gbdt = xgb.train(self.param, dtrain, self.nrounds, watchlist, feval=evalerror, obj=logregobj, early_stopping_rounds=50)
+        self.gbdt = xgb.train(self.param, dtrain, self.nrounds, watchlist, obj=logregobj, feval=evalerror, early_stopping_rounds=50)
 
     def predict(self, x):
         return self.gbdt.predict(xgb.DMatrix(x))
@@ -104,12 +102,12 @@ def get_oof(clf):
             x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i + j)
             clf.train(x_tr, y_tr, RANDOM_STATE + i, x_te, y_te)
 
-            pred += np.exp(clf.predict(x_te))
-            pred_test += np.exp(clf.predict(X_test))
+            pred += clf.predict(x_te)**4
+            pred_test += clf.predict(X_test)**4
 
         pred /= nbags
         pred_oob[test_index] = pred
-        score = mean_absolute_error(np.exp(y_te), pred)
+        score = mean_absolute_error(y_te**4, pred)
         print('Fold ', i, '- MAE:', score)
 
     return pred_oob, pred_test
@@ -118,13 +116,13 @@ def get_oof(clf):
 xg = XgbWrapper(seed=RANDOM_STATE, params=xgb_params)
 xg_oof_train, xg_oof_test = get_oof(xg)
 
-print("XG-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
+print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
-oof_train = pd.DataFrame({'id': X_train_id, 'loss': (xg_oof_train - shift)})
-oof_train.to_csv('oof/xgb_train_t1.csv', index=False)
+oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
+oof_train.to_csv('oof/xgb_train_s2.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
-oof_test = pd.DataFrame({'id': X_test_id, 'loss': (xg_oof_test - shift)})
-oof_test.to_csv('oof/xgb_test_t1.csv', index=False)
+oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
+oof_test.to_csv('oof/xgb_test_s2.csv', index=False)
 
