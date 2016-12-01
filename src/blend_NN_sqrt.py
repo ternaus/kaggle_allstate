@@ -32,6 +32,9 @@ xgb_test_1 = pd.read_csv('oof/xgb_test_t1.csv').rename(columns={'loss': 'xgb_los
 xgb_train_s1 = pd.read_csv('oof/xgb_train_s1.csv').rename(columns={'loss': 'xgb_loss_s1'})
 xgb_test_s1 = pd.read_csv('oof/xgb_test_s1.csv').rename(columns={'loss': 'xgb_loss_s1'})
 
+xgb_train_s2 = pd.read_csv('oof/xgb_train_s2.csv').rename(columns={'loss': 'xgb_loss_s2'})
+xgb_test_s2 = pd.read_csv('oof/xgb_test_s2.csv').rename(columns={'loss': 'xgb_loss_s2'})
+
 nn_train_1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_1'})
 nn_test_1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_1'})
 
@@ -58,6 +61,7 @@ rf_test_s1 = pd.read_csv('oof/rf_test_s1.csv').rename(columns={'loss': 'rf_loss_
 X_train = (train[['id', 'loss']]
            .merge(xgb_train_1, on='id')
            .merge(xgb_train_s1, on='id')
+            .merge(xgb_train_s2, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
             .merge(nn_train_3, on='id')
@@ -70,6 +74,7 @@ X_train = (train[['id', 'loss']]
 X_test = (test[['id', 'cat1']]
           .merge(xgb_test_1, on='id')
           .merge(xgb_test_s1, on='id')
+            .merge(xgb_test_s2, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
           .merge(nn_test_3, on='id')
