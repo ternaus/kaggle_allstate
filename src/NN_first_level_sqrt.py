@@ -40,6 +40,10 @@ def batch_generator(X, y, batch_size, shuffle):
         batch_index = sample_index[batch_size*counter:batch_size*(counter+1)]
         X_batch = X[batch_index, :].toarray()
         y_batch = y[batch_index]
+
+        to_flip_index = np.array(sorted(np.random.choice(range(X_batch.shape[0]), int(0.1 * X_batch.shape[0]), replace=False)))
+        y[to_flip_index] *= -1
+        X_batch[to_flip_index, X_batch.shape[1] - 17:X_batch.shape[1] - 12] *= -1
         counter += 1
         yield X_batch, y_batch
         if counter == number_of_batches:
@@ -63,16 +67,16 @@ def batch_generatorp(X, batch_size, shuffle):
 
 def nn_model():
     model = Sequential()
-    model.add(Dense(400, init='he_normal', input_dim=xtrain.shape[1]))
-    model.add(PReLU())
-    model.add(BatchNormalization())
+    model.add(Dense(400, activation='elu', init='he_normal', input_dim=xtrain.shape[1]))
+    # model.add(PReLU())
+    # model.add(BatchNormalization())
     model.add(Dropout(0.4))
-    model.add(Dense(200, init='he_normal'))
-    model.add(PReLU())
-    model.add(BatchNormalization())
+    model.add(Dense(200, init='he_normal', activation='elu'))
+    # model.add(PReLU())
+    # model.add(BatchNormalization())
     model.add(Dropout(0.4))
-    model.add(Dense(50, init='he_normal'))
-    model.add(PReLU())
+    model.add(Dense(50, init='he_normal', activation='elu'))
+    # model.add(PReLU())
     # model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))

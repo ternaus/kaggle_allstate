@@ -35,6 +35,12 @@ xgb_test_s1 = pd.read_csv('oof/xgb_test_s1.csv').rename(columns={'loss': 'xgb_lo
 xgb_train_s2 = pd.read_csv('oof/xgb_train_s2.csv').rename(columns={'loss': 'xgb_loss_s2'})
 xgb_test_s2 = pd.read_csv('oof/xgb_test_s2.csv').rename(columns={'loss': 'xgb_loss_s2'})
 
+xgb_train_s3 = pd.read_csv('oof/xgb_train_s3.csv').rename(columns={'loss': 'xgb_loss_s3'})
+xgb_test_s3 = pd.read_csv('oof/xgb_test_s3.csv').rename(columns={'loss': 'xgb_loss_s3'})
+
+xgb_train_s4 = pd.read_csv('oof/xgb_train_s4.csv').rename(columns={'loss': 'xgb_loss_s4'})
+xgb_test_s4 = pd.read_csv('oof/xgb_test_s4.csv').rename(columns={'loss': 'xgb_loss_s4'})
+
 nn_train_1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_1'})
 nn_test_1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_1'})
 
@@ -57,11 +63,12 @@ rf_train_s1 = pd.read_csv('oof/rf_train_s1.csv').rename(columns={'loss': 'rf_los
 rf_test_s1 = pd.read_csv('oof/rf_test_s1.csv').rename(columns={'loss': 'rf_loss_s1'})
 
 
-
 X_train = (train[['id', 'loss']]
            .merge(xgb_train_1, on='id')
            .merge(xgb_train_s1, on='id')
             .merge(xgb_train_s2, on='id')
+           .merge(xgb_train_s3, on='id')
+           .merge(xgb_train_s4, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
             .merge(nn_train_3, on='id')
@@ -74,7 +81,9 @@ X_train = (train[['id', 'loss']]
 X_test = (test[['id', 'cat1']]
           .merge(xgb_test_1, on='id')
           .merge(xgb_test_s1, on='id')
-            .merge(xgb_test_s2, on='id')
+          .merge(xgb_test_s2, on='id')
+          .merge(xgb_test_s3, on='id')
+          .merge(xgb_test_s4, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
           .merge(nn_test_3, on='id')
@@ -109,9 +118,9 @@ RANDOM_STATE = 2016
 
 def nn_model():
     model = Sequential()
-    model.add(Dense(50, input_dim=X_train.shape[1], init='he_normal', activation='elu'))
+    model.add(Dense(100, input_dim=X_train.shape[1], init='he_normal', activation='elu'))
     # model.add(Dropout(0.5))
-    # model.add(Dense(100, init='he_normal', activation='elu'))
+    model.add(Dense(100, init='he_normal', activation='elu'))
     model.add(Dense(1, init='he_normal'))
     return model
 
@@ -140,8 +149,8 @@ for i, (inTr, inTe) in enumerate(KFold(n_folds, shuffle=True, random_state=RANDO
     for j in range(nbags):
         model = nn_model()
         model.compile(loss='mae',
-                      # optimizer='adadelta',
-                      optimizer=Nadam(lr=1e-3),
+                      optimizer='adadelta',
+                      # optimizer=Nadam(lr=1e-3),
                       metrics=[f_eval]
                       )
         callbacks = [
@@ -172,9 +181,9 @@ print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob))
 
 # train predictions
 df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob})
-df.to_csv('oof2/NN_train_s1.csv', index=False)
+df.to_csv('oof2/NN_train_s3.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': X_test_id, 'loss': pred_test})
-df.to_csv('oof2/NN_test_s1.csv', index=False)
+df.to_csv('oof2/NN_test_s3.csv', index=False)
