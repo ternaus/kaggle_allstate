@@ -42,18 +42,18 @@ print X_train.shape, X_test.shape
 RANDOM_STATE = 2016
 xgb_params = {
     'min_child_weight': 100,
-    'eta': 0.01,
+    'eta': 0.005,
     'colsample_bytree': 0.5,
     'max_depth': 13,
     'subsample': 0.8,
-    # 'alpha': 5,
+    'alpha': 5,
     'lambda': 5,
     'gamma': 1,
     'silent': 1,
     # 'base_score': y_mean,
     'verbose_eval': 1,
     'seed': RANDOM_STATE,
-    'nrounds': 10000
+    'nrounds': 30000
 }
 
 n_folds = 10
@@ -120,10 +120,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/xgb_train_s4.csv', index=False)
+oof_train.to_csv('oof/xgb_train_s5.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/xgb_test_s4.csv', index=False)
+oof_test.to_csv('oof/xgb_test_s5.csv', index=False)
 
