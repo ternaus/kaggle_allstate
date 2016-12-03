@@ -19,7 +19,7 @@ from keras.layers.core import Activation
 sys.path += ['/home/vladimir/packages/xgboost/python-package']
 
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from pylab import *
 import clean_data
 
@@ -40,6 +40,9 @@ xgb_test_s3 = pd.read_csv('oof/xgb_test_s3.csv').rename(columns={'loss': 'xgb_lo
 
 xgb_train_s4 = pd.read_csv('oof/xgb_train_s4.csv').rename(columns={'loss': 'xgb_loss_s4'})
 xgb_test_s4 = pd.read_csv('oof/xgb_test_s4.csv').rename(columns={'loss': 'xgb_loss_s4'})
+
+xgb_train_s5 = pd.read_csv('oof/xgb_train_s5.csv').rename(columns={'loss': 'xgb_loss_s5'})
+xgb_test_s5 = pd.read_csv('oof/xgb_test_s5.csv').rename(columns={'loss': 'xgb_loss_s5'})
 
 nn_train_1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_1'})
 nn_test_1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_1'})
@@ -69,6 +72,7 @@ X_train = (train[['id', 'loss']]
             .merge(xgb_train_s2, on='id')
            .merge(xgb_train_s3, on='id')
            .merge(xgb_train_s4, on='id')
+            .merge(xgb_train_s5, on='id')
            .merge(nn_train_1, on='id')
            .merge(nn_train_2, on='id')
             .merge(nn_train_3, on='id')
@@ -84,6 +88,7 @@ X_test = (test[['id', 'cat1']]
           .merge(xgb_test_s2, on='id')
           .merge(xgb_test_s3, on='id')
           .merge(xgb_test_s4, on='id')
+          .merge(xgb_test_s5, on='id')
           .merge(nn_test_1, on='id')
           .merge(nn_test_2, on='id')
           .merge(nn_test_3, on='id')
@@ -112,7 +117,7 @@ X_test = X_test.drop('id', 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 
 test_ids = test['id']
 
-num_rounds = 300000
+num_rounds = 3
 RANDOM_STATE = 2016
 
 
@@ -133,18 +138,19 @@ scores = []
 
 classes = clean_data.classes(y_train, bins=100)
 
-pred_oob = np.zeros(X_train.shape[0])
-pred_test = np.zeros(X_test.shape[0])
+nbags = 10
 
-nbags = 5
+pred_oob = np.zeros((X_train.shape[0], nbags))
+pred_test = np.zeros((X_test.shape[0], n_folds * nbags))
 
+print pred_test.shape
 
-for i, (inTr, inTe) in enumerate(KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).split(classes, classes)):
+for i, (inTr, inTe) in enumerate(StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE).split(classes, classes)):
     xtr = X_train[inTr]
     ytr = y_train[inTr]
     xte = X_train[inTe]
     yte = y_train[inTe]
-    pred = np.zeros(xte.shape[0])
+    # pred = np.zeros(xte.shape[0])
 
     for j in range(nbags):
         model = nn_model()
@@ -168,22 +174,31 @@ for i, (inTr, inTe) in enumerate(KFold(n_folds, shuffle=True, random_state=RANDO
                       optimizer='adadelta',
                       # optimizer=Nadam(lr=1e-3),
                       metrics=[f_eval])
-        pred += model.predict(xte)[:, 0]**4
 
-        pred_test += model.predict(X_test)[:, 0]**4
+        pred_oob[inTe, j] = model.predict(xte)[:, 0]**4
+        pred_test[:, j * n_folds + i - 1] = model.predict(X_test)[:, 0]**4
 
-    pred /= nbags
-    pred_oob[inTe] = pred
-    score = mean_absolute_error(yte**4, pred)
-    print('Fold ', i, '- MAE:', score)
 
-print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob))
+pred_oob_median = np.median(pred_oob, axis=1)
+pred_oob_mean = np.mean(pred_oob, axis=1)
+
+pred_test_median = np.median(pred_test, axis=1)
+pred_test_mean = np.mean(pred_test, axis=1)
+
+
+print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob_median))
+print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob_mean))
 
 # train predictions
-df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob})
-df.to_csv('oof2/NN_train_s3.csv', index=False)
+df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob_median})
+df.to_csv('oof2/NN_train_s4_median.csv', index=False)
 
-# test predictions
-pred_test /= (n_folds * nbags)
-df = pd.DataFrame({'id': X_test_id, 'loss': pred_test})
-df.to_csv('oof2/NN_test_s3.csv', index=False)
+df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob_mean})
+df.to_csv('oof2/NN_train_s4_mean.csv', index=False)
+
+
+df = pd.DataFrame({'id': X_test_id, 'loss': pred_test_median})
+df.to_csv('oof2/NN_test_s4_median.csv', index=False)
+
+df = pd.DataFrame({'id': X_test_id, 'loss': pred_test_mean})
+df.to_csv('oof2/NN_test_s4_mean.csv', index=False)
