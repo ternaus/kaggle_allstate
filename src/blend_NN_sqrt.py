@@ -21,6 +21,8 @@ sys.path += ['/home/vladimir/packages/xgboost/python-package']
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import StratifiedKFold
 from pylab import *
+from sklearn.utils import shuffle
+
 import clean_data
 
 train = pd.read_csv('../data/train.csv')
@@ -53,6 +55,9 @@ nn_test_2 = pd.read_csv('oof/NN_test_p2.csv').rename(columns={'loss': 'nn_loss_2
 nn_train_3 = pd.read_csv('oof/NN_train_p3.csv').rename(columns={'loss': 'nn_loss_3'})
 nn_test_3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_3'})
 
+nn_class_train = pd.read_csv('oof/NN_class_train.csv')
+nn_class_test = pd.read_csv('oof/NN_class_test.csv')
+
 lgbt_train_1 = pd.read_csv('oof/lgbt_train_1.csv').rename(columns={'loss': 'lgbt_loss_1'})
 lgbt_test_1 = pd.read_csv('oof/lgbt_test_1.csv').rename(columns={'loss': 'lgbt_loss_1'})
 
@@ -80,6 +85,7 @@ X_train = (train[['id', 'loss']]
            .merge(et_train_1, on='id')
            .merge(et_train_s1, on='id')
            .merge(rf_train_s1, on='id')
+            # .merge(nn_class_train, on='id')
            )
 
 X_test = (test[['id', 'cat1']]
@@ -96,28 +102,20 @@ X_test = (test[['id', 'cat1']]
           .merge(et_test_1, on='id')
           .merge(et_test_s1, on='id')
           .merge(rf_test_s1, on='id')
+          # .merge(nn_class_test, on='id')
           .drop('cat1', 1))
-
 
 y_train = np.sqrt(np.sqrt(X_train['loss'].values))
 
 X_train_id = X_train['id'].values
 X_test_id = X_test['id'].values
 
-
 X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 X_test = X_test.drop('id', 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 
-# X_train_mean = X_train.mean(axis=0)
-#
-# print X_train_mean
-# print len(X_train_mean)
+X_test = np.hstack([X_test, nn_class_test.drop('id', 1).values])
+X_train = np.hstack([X_train, nn_class_train.drop('id', 1).values])
 
-# X_train -= X_train.mean()
-
-test_ids = test['id']
-
-num_rounds = 3
 RANDOM_STATE = 2016
 
 
@@ -153,11 +151,12 @@ for i, (inTr, inTe) in enumerate(StratifiedKFold(n_folds, shuffle=True, random_s
     # pred = np.zeros(xte.shape[0])
 
     for j in range(nbags):
+        xtr, ytr = shuffle(xtr, ytr, random_state=RANDOM_STATE)
         model = nn_model()
         model.compile(loss='mae',
                       optimizer='adadelta',
-                      # optimizer=Nadam(lr=1e-3),
-                      metrics=[f_eval]
+                      # optimizer=Nadam(lr=1e-4),
+                      metrics=[f_eval],
                       )
         callbacks = [
             ModelCheckpoint('keras_cache/keras-regressor-' + str(i + 1) + '.hdf5', monitor='val_loss',
@@ -165,6 +164,7 @@ for i, (inTr, inTe) in enumerate(StratifiedKFold(n_folds, shuffle=True, random_s
             EarlyStopping(patience=25, monitor='val_f_eval')
         ]
         model.fit(xtr, ytr,
+                  # batch_size=2**6,
                   validation_data=(xte, yte),
                   nb_epoch=2000,
                   callbacks=callbacks)
@@ -191,14 +191,13 @@ print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob_mean))
 
 # train predictions
 df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob_median})
-df.to_csv('oof2/NN_train_s4_median.csv', index=False)
+df.to_csv('oof2/NN_train_s5_median.csv', index=False)
 
 df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob_mean})
-df.to_csv('oof2/NN_train_s4_mean.csv', index=False)
-
+df.to_csv('oof2/NN_train_s5_mean.csv', index=False)
 
 df = pd.DataFrame({'id': X_test_id, 'loss': pred_test_median})
-df.to_csv('oof2/NN_test_s4_median.csv', index=False)
+df.to_csv('oof2/NN_test_s5_median.csv', index=False)
 
 df = pd.DataFrame({'id': X_test_id, 'loss': pred_test_mean})
-df.to_csv('oof2/NN_test_s4_mean.csv', index=False)
+df.to_csv('oof2/NN_test_s5_mean.csv', index=False)
