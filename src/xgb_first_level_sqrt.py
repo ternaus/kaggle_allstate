@@ -32,8 +32,8 @@ def evalerror(preds, dtrain):
     return 'mae', mean_absolute_error(preds**4, labels**4)
 
 
-X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=True)
-
+X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=True, add_aggregates=True)
+print list(X_train.columns)
 X_train = X_train.values
 X_test = X_test.values
 
@@ -120,10 +120,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/xgb_train_s6.csv', index=False)
+oof_train.to_csv('oof/xgb_train_s7.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/xgb_test_s6.csv', index=False)
+oof_test.to_csv('oof/xgb_test_s7.csv', index=False)
 
