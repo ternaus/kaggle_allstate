@@ -11,6 +11,8 @@ from scipy.stats import skew, boxcox
 import itertools
 from scipy.stats import rankdata
 from sklearn.model_selection import StratifiedKFold
+from StringIO import StringIO
+import string
 
 
 def label_encode(shift=200):
@@ -385,6 +387,9 @@ def fancy(shift=200, quadratic=False, truncate=False):
     for column in cats_old:
         joined_t[column] = pd.factorize(joined_t[column], sort=True)[0]
 
+    # Adding extra features
+    joined['state'] = joined['cat112'].map(_get_state())
+
     if quadratic:
         # Adding quadratic features
         for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
@@ -395,6 +400,7 @@ def fancy(shift=200, quadratic=False, truncate=False):
 
     train = joined.iloc[:ntrain, :]
     test = joined.iloc[ntrain:, :]
+
 
     # Encoding categorical features
     cats = [x for x in joined.columns if 'cat' in x]
@@ -521,6 +527,21 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 def classes(y, bins):
     """
 
+
+
+def _get_state(train):
+    POPULATION_DATA = StringIO('state_full,state,population\nAlabama,AL,' \
+                               + '4779736\nAlaska,AK,710231\nArizona,AZ,6392017\nArkansas,AR,' \
+                               + '2915918\nCalifornia,CA,37253956\nColorado,CO,5029196\nConnecticut,CT,' \
+                               + '3574097\nDelaware,DE,897934\nDistrict of Columbia,DC,601723\nFlorida,FL,' \
+                               + '18801310\nGeorgia,GA,9687653\nHawaii,HI,1360301\nIdaho,ID,' \
+                               + '1567582\nIllinois,IL,12830632\nIndiana,IN,6483802\nIowa,IA,' \
+                               + '3046355\nKansas,KS,2853118\nKentucky,KY,4339367\nLouisiana,LA,' \
+                               + '4533372\nMaine,ME,1328361\nMaryland,MD,5773552\nMassachusetts,MA,' \
+                               + '6547629\nMichigan,MI,9883640\nMinnesota,MN,5303925\nMississippi,MS,' \
+                               + '2967297\nMissouri,MO,5988927\nMontana,MT,989415\nNebraska,NE,' \
+                               + '1826341\nNevada,NV,2700551\nNew Hampshire,NH,1316470\nNew Jersey,NJ,' \
+                               + '8791894\nNew Mexico,NM,2059179\nNew York,NY,19378102\nNorth Carolina,NC' \
     :param y: list of targets
     :param bins:
     :return:
@@ -536,3 +557,17 @@ def classes(y, bins):
     assert min(result) == 0
     assert max(result) == bins - 1
     return result
+                               + ',9535483\nNorth Dakota,ND,672591\nOhio,OH,11536504\nOklahoma,OK,' \
+                               + '3751351\nOregon,OR,3831074\nPennsylvania,PA,12702379\nRhode Island,RI,' \
+                               + '1052567\nSouth Carolina,SC,4625364\nSouth Dakota,SD,814180\nTennessee,TN,' \
+                               + '6346105\nTexas,TX,25145561\nUtah,UT,2763885\nVermont,VT,625741\nVirginia,VA,' \
+                               + '8001024\nWashington,WA,6724540\nWest Virginia,WV,1852994\nWisconsin,WI,' \
+                               + '5686986\nWyoming,WY,563626\n')
+
+    pop = pd.read_csv(POPULATION_DATA)
+    translation = list(string.ascii_uppercase)[:-1]
+    for elem_i in translation[:2]:
+        for elem_j in translation[:25]:
+            translation.append(elem_i + elem_j)
+
+    return dict(zip(translation[:51], pop.state))

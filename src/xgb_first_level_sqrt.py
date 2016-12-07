@@ -19,7 +19,7 @@ joined = pd.concat([train, test])
 
 def logregobj(preds, dtrain):
     labels = dtrain.get_label()
-    con = 0.7
+    con = 2
     x = preds - labels
     den = np.abs(x) + con
     grad = con * x / den
@@ -32,7 +32,8 @@ def evalerror(preds, dtrain):
     return 'mae', mean_absolute_error(preds**4, labels**4)
 
 
-X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=True, add_aggregates=True)
+X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=False,
+                                                                                add_aggregates=False)
 print list(X_train.columns)
 X_train = X_train.values
 X_test = X_test.values
