@@ -32,7 +32,7 @@ def evalerror(preds, dtrain):
     return 'mae', mean_absolute_error(preds**4, labels**4)
 
 
-X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=False,
+X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=True,
                                                                                 add_aggregates=False)
 print list(X_train.columns)
 X_train = X_train.values
@@ -44,11 +44,11 @@ RANDOM_STATE = 2016
 xgb_params = {
     'min_child_weight': 100,
     'eta': 0.01,
-    'colsample_bytree': 0.7,
-    'max_depth': 12,
-    'subsample': 0.7,
+    'colsample_bytree': 0.5,
+    'max_depth': 13,
+    'subsample': 0.8,
     # 'alpha': 5,
-    # 'lambda': 5,
+    'lambda': 5,
     # 'gamma': 1,
     'silent': 1,
     # 'base_score': y_mean,

@@ -10,7 +10,6 @@ from tqdm import tqdm
 from scipy.stats import skew, boxcox
 import itertools
 from scipy.stats import rankdata
-from sklearn.model_selection import StratifiedKFold
 from StringIO import StringIO
 import string
 
@@ -25,8 +24,6 @@ def label_encode(shift=200):
     test['loss'] = np.nan
     joined = pd.concat([train, test])
     for column in list(train.select_dtypes(include=['object']).columns):
-        # g = train.groupby(column)['loss'].mean()
-        # g = train.groupby(column)['loss'].median()
 
         if train[column].nunique() != test[column].nunique():
             # Let's find extra categories...
@@ -389,6 +386,7 @@ def fancy(shift=200, quadratic=False, truncate=False):
 
     # Adding extra features
     joined['state'] = joined['cat112'].map(_get_state())
+    print joined['state'].unique()
 
     if quadratic:
         # Adding quadratic features
@@ -450,10 +448,23 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 
     train = train.drop_duplicates(subset=temp_columns)
 
+    train = train.merge(pd.read_csv('../data/train_window.csv'), on='id')
+
     test = pd.read_csv('../data/test.csv')
+    test = test.merge(pd.read_csv('../data/test_window.csv'), on='id')
+
     numeric_feats = [x for x in train.columns if 'cont' in x]
 
     joined, ntrain = mungeskewed(train, test, numeric_feats)
+
+    # Adding extra features
+    joined['state'] = joined['cat112'].map(_get_state())
+    joined['census_region'] = joined['state'].map(_get_census_region())
+    joined['timezone'] = joined['state'].map(_get_timezone())
+
+    joined['state'] = pd.factorize(joined['state'], sort=True)[0]
+    joined['census_region'] = pd.factorize(joined['census_region'], sort=True)[0]
+    joined['timezone'] = pd.factorize(joined['timezone'], sort=True)[0]
 
     joined_t = joined.copy()
     cats_old = [x for x in joined_t.columns if 'cat' in x]
@@ -511,11 +522,12 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 
     joined['sum_of_cats_0'] = (joined_t[cats_old] == 0).sum(axis=1)
     joined['sum_of_cats_0_71'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+
     joined = joined.fillna(0)
 
     print 'scaling'
-    ss = StandardScaler()
-    joined[numeric_feats] = ss.fit_transform(joined[numeric_feats].values)
+    # ss = StandardScaler()
+    # joined[numeric_feats] = ss.fit_transform(joined[numeric_feats].values)
     X_train = joined.iloc[:ntrain, :]
     X_test = joined.iloc[ntrain:, :]
     y_train = np.sqrt(np.sqrt(X_train['loss'].values))
@@ -524,12 +536,7 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
 
 
-def classes(y, bins):
-    """
-
-
-
-def _get_state(train):
+def _get_state():
     POPULATION_DATA = StringIO('state_full,state,population\nAlabama,AL,' \
                                + '4779736\nAlaska,AK,710231\nArizona,AZ,6392017\nArkansas,AR,' \
                                + '2915918\nCalifornia,CA,37253956\nColorado,CO,5029196\nConnecticut,CT,' \
@@ -541,7 +548,26 @@ def _get_state(train):
                                + '6547629\nMichigan,MI,9883640\nMinnesota,MN,5303925\nMississippi,MS,' \
                                + '2967297\nMissouri,MO,5988927\nMontana,MT,989415\nNebraska,NE,' \
                                + '1826341\nNevada,NV,2700551\nNew Hampshire,NH,1316470\nNew Jersey,NJ,' \
-                               + '8791894\nNew Mexico,NM,2059179\nNew York,NY,19378102\nNorth Carolina,NC' \
+                               + '8791894\nNew Mexico,NM,2059179\nNew York,NY,19378102\nNorth Carolina,NC'
+                               + ',9535483\nNorth Dakota,ND,672591\nOhio,OH,11536504\nOklahoma,OK,' \
+                               + '3751351\nOregon,OR,3831074\nPennsylvania,PA,12702379\nRhode Island,RI,' \
+                               + '1052567\nSouth Carolina,SC,4625364\nSouth Dakota,SD,814180\nTennessee,TN,' \
+                               + '6346105\nTexas,TX,25145561\nUtah,UT,2763885\nVermont,VT,625741\nVirginia,VA,' \
+                               + '8001024\nWashington,WA,6724540\nWest Virginia,WV,1852994\nWisconsin,WI,' \
+                               + '5686986\nWyoming,WY,563626\n')
+
+    pop = pd.read_csv(POPULATION_DATA)
+    translation = list(string.ascii_uppercase)[:-1]
+    for elem_i in translation[:2]:
+        for elem_j in translation[:25]:
+            translation.append(elem_i + elem_j)
+
+    return dict(zip(translation[:51], pop.state))
+
+
+def classes(y, bins):
+    """
+
     :param y: list of targets
     :param bins:
     :return:
@@ -557,17 +583,114 @@ def _get_state(train):
     assert min(result) == 0
     assert max(result) == bins - 1
     return result
-                               + ',9535483\nNorth Dakota,ND,672591\nOhio,OH,11536504\nOklahoma,OK,' \
-                               + '3751351\nOregon,OR,3831074\nPennsylvania,PA,12702379\nRhode Island,RI,' \
-                               + '1052567\nSouth Carolina,SC,4625364\nSouth Dakota,SD,814180\nTennessee,TN,' \
-                               + '6346105\nTexas,TX,25145561\nUtah,UT,2763885\nVermont,VT,625741\nVirginia,VA,' \
-                               + '8001024\nWashington,WA,6724540\nWest Virginia,WV,1852994\nWisconsin,WI,' \
-                               + '5686986\nWyoming,WY,563626\n')
 
-    pop = pd.read_csv(POPULATION_DATA)
-    translation = list(string.ascii_uppercase)[:-1]
-    for elem_i in translation[:2]:
-        for elem_j in translation[:25]:
-            translation.append(elem_i + elem_j)
 
-    return dict(zip(translation[:51], pop.state))
+def _get_census_region():
+    maps = [('TX', 'south'),
+     ('VA', 'south'),
+     ('AZ', 'west'),
+     ('IL', 'midwest'),
+     ('MS', 'south'),
+     ('FL', 'south'),
+     ('NY', 'northeast'),
+     ('GA', 'south'),
+     ('MD', 'south'),
+     ('CA', 'west'),
+     ('OH', 'midwest'),
+     ('NC', 'south'),
+     ('NH', 'northeast'),
+     ('AL', 'south'),
+     ('HI', 'west'),
+     ('CO', 'west'),
+     ('SC', 'south'),
+     ('NV', 'west'),
+     ('NJ', 'northeast'),
+     ('OK', 'south'),
+     ('PA', 'northeast'),
+     ('LA', 'south'),
+     ('WA', 'west'),
+     ('DC', 'south'),
+     ('TN', 'south'),
+     ('WV', 'south'),
+     ('VT', 'northeast'),
+     ('SD', 'midwest'),
+     ('IN', 'midwest'),
+     ('RI', 'northeast'),
+     ('KY', 'south'),
+     ('DE', 'south'),
+     ('CT', 'northeast'),
+     ('NE', 'midwest'),
+     ('UT', 'west'),
+     ('NM', 'west'),
+     ('MN', 'midwest'),
+     ('MO', 'midwest'),
+     ('KS', 'midwest'),
+     ('WI', 'midwest'),
+     ('AR', 'south'),
+     ('WY', 'west'),
+     ('IA', 'midwest'),
+     ('AK', 'west'),
+     ('OR', 'west'),
+     ('ID', 'west'),
+     ('ME', 'northeast'),
+     ('MI', 'midwest'),
+     ('MA', 'northeast'),
+     ('MT', 'west'),
+     ('ND', 'midwest')]
+
+    return dict(maps)
+
+
+def _get_timezone():
+    maps = [('TX', 'CST'),
+     ('VA', 'EST'),
+     ('AZ', 'MST'),
+     ('IL', 'CST'),
+     ('MS', 'CST'),
+     ('FL', 'EST'),
+     ('NY', 'EST'),
+     ('GA', 'EST'),
+     ('MD', 'EST'),
+     ('CA', 'PST'),
+     ('OH', 'EST'),
+     ('NC', 'EST'),
+     ('NH', 'EST'),
+     ('AL', 'CST'),
+     ('HI', 'HST'),
+     ('CO', 'MST'),
+     ('SC', 'EST'),
+     ('NV', 'PST'),
+     ('NJ', 'EST'),
+     ('OK', 'CST'),
+     ('PA', 'EST'),
+     ('LA', 'CST'),
+     ('WA', 'PST'),
+     ('DC', 'EST'),
+     ('TN', 'CST'),
+     ('WV', 'EST'),
+     ('VT', 'EST'),
+     ('SD', 'CST'),
+     ('IN', 'EST'),
+     ('RI', 'EST'),
+     ('KY', 'CST'),
+     ('DE', 'EST'),
+     ('CT', 'EST'),
+     ('NE', 'CST'),
+     ('UT', 'MST'),
+     ('NM', 'MST'),
+     ('MN', 'CST'),
+     ('MO', 'CST'),
+     ('KS', 'CST'),
+     ('WI', 'CST'),
+     ('AR', 'CST'),
+     ('WY', 'MST'),
+     ('IA', 'CST'),
+     ('AK', 'AKST'),
+     ('OR', 'PST'),
+     ('ID', 'MST'),
+     ('ME', 'EST'),
+     ('MI', 'EST'),
+     ('MA', 'EST'),
+     ('MT', 'MST'),
+     ('ND', 'CST')]
+    return dict(maps)
