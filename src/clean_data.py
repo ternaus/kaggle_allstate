@@ -9,6 +9,8 @@ from scipy.sparse import csr_matrix, hstack
 from tqdm import tqdm
 from scipy.stats import skew, boxcox
 import itertools
+from scipy.stats import rankdata
+from sklearn.model_selection import StratifiedKFold
 
 
 def label_encode(shift=200):
@@ -228,6 +230,104 @@ def one_hot_categorical(shift=0, subtract_mean=False, quadratic=False):
     return xtrain, y, xtest, y_mean, id_test, id_train
 
 
+def one_hot_categorical_sqrt(subtract_mean=False, quadratic=False):
+    ## read data
+    train = pd.read_csv('../data/train.csv')
+
+    print train.shape
+
+    temp_columns = list(train.columns)
+    temp_columns.remove('id')
+    temp_columns.remove('loss')
+
+    train = train.drop_duplicates(subset=temp_columns)
+    print train.shape
+
+    test = pd.read_csv('../data/test.csv')
+
+    ## set test loss to NaN
+    test['loss'] = np.nan
+
+    # response and IDs
+
+    y = np.sqrt(np.sqrt(train['loss'].values))
+
+    y_mean = y.mean()
+    if subtract_mean:
+        y = y - y_mean
+
+    id_train = train['id'].values
+    id_test = test['id'].values
+
+    # stack train test
+    ntrain = train.shape[0]
+    joined = pd.concat((train, test), axis=0)
+
+    joined_t = joined.copy()
+    cats_old = [x for x in joined_t.columns if 'cat' in x]
+
+    for column in cats_old:
+        joined_t[column] = pd.factorize(joined_t[column], sort=True)[0]
+
+    if quadratic:
+        numeric_feats = [x for x in train.columns if 'cont' in x]
+
+        joined, ntrain = mungeskewed(train, test, numeric_feats)
+        COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+        ',')
+        for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
+            feat = comb[0] + "_" + comb[1]
+
+            joined[feat] = joined[comb[0]] + joined[comb[1]]
+
+        train = joined.iloc[:ntrain, :]
+        test = joined.iloc[ntrain:, :]
+
+    # Preprocessing and transforming to sparse data
+    print joined.head().info()
+    cat_columns = joined.select_dtypes(include=['object']).columns
+
+    to_drop = []
+    for column in list(cat_columns):
+        joined[column] = filter_cat(joined, train, test, column)
+        if joined[column].nunique() == 1:
+            to_drop += [column]
+
+    print 'dropping = ', to_drop
+    joined = joined.drop(to_drop, 1)
+
+    cat_columns = joined.select_dtypes(include=['object']).columns
+
+    sparse_data = []
+
+    for f in tqdm(cat_columns):
+        dummy = pd.get_dummies(joined[f].astype('category'))
+        tmp = csr_matrix(dummy)
+        sparse_data.append(tmp)
+
+    # joined['sum_of_cats_cont'] = (joined_t[cats_old] == 0).sum(axis=1)
+    # joined['sum_of_cats_0_cont'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+    #
+    # print joined['sum_of_cats_cont'].value_counts()
+    # print
+    # print joined['sum_of_cats_0_cont'].value_counts()
+    joined = joined.fillna(0)
+
+    f_num = [f for f in joined.columns if 'cont' in f]
+    print len(f_num)
+    scaler = StandardScaler()
+    tmp = csr_matrix(scaler.fit_transform(joined[f_num]))
+    sparse_data.append(tmp)
+
+    del(joined, train, test)
+
+    # sparse train and test data
+    xtr_te = hstack(sparse_data, format='csr')
+    xtrain = xtr_te[:ntrain, :]
+    xtest = xtr_te[ntrain:, :]
+    return xtrain, y, xtest, y_mean, id_test, id_train
+
+
 def encode(charcode):
     r = 0
     ln = len(charcode)
@@ -254,7 +354,7 @@ def mungeskewed(train, test, numeric_feats):
     return train_test, ntrain
 
 
-def fancy(shift=200, quadratic=False, truncate=False, add_zero_count=True):
+def fancy(shift=200, quadratic=False, truncate=False):
     """
     From https://www.kaggle.com/modkzs/allstate-claims-severity/lexical-encoding-feature-comb/code
     :param shift:
@@ -263,6 +363,15 @@ def fancy(shift=200, quadratic=False, truncate=False, add_zero_count=True):
     COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
         ',')
     train = pd.read_csv('../data/train.csv')
+    print train.shape
+
+    temp_columns = list(train.columns)
+    temp_columns.remove('id')
+    temp_columns.remove('loss')
+
+    train = train.drop_duplicates(subset=temp_columns)
+    print train.shape
+
     if truncate:
         train = train[(train['loss'] > 200) & (train['loss'] < 30000)]
 
@@ -323,6 +432,107 @@ def fancy(shift=200, quadratic=False, truncate=False, add_zero_count=True):
     return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
 
 
+def fancy_sqrt(quadratic=False, add_aggregates=False):
+    COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+        ',')
+    train = pd.read_csv('../data/train.csv')
+    print train.shape
+
+    temp_columns = list(train.columns)
+    temp_columns.remove('id')
+    temp_columns.remove('loss')
+
+    train = train.drop_duplicates(subset=temp_columns)
+
+    test = pd.read_csv('../data/test.csv')
+    numeric_feats = [x for x in train.columns if 'cont' in x]
+
+    joined, ntrain = mungeskewed(train, test, numeric_feats)
+
+    joined_t = joined.copy()
+    cats_old = [x for x in joined_t.columns if 'cat' in x]
+    for column in cats_old:
+        joined_t[column] = pd.factorize(joined_t[column], sort=True)[0]
+
+    if quadratic:
+        # Adding quadratic features
+        for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
+            feat = comb[0] + "_" + comb[1]
+
+            joined[feat] = joined[comb[0]] + joined[comb[1]]
+            assert joined[feat].isnull().sum() == 0
+
+    train = joined.iloc[:ntrain, :]
+    test = joined.iloc[ntrain:, :]
+
+    # Encoding categorical features
+    cats = [x for x in joined.columns if 'cat' in x]
+
+    to_drop = []
+    for column in tqdm(cats):
+        joined[column] = filter_cat(joined, train, test, column)
+        if joined[column].nunique() == 1:
+            to_drop += [column]
+            continue
+        joined[column] = joined[column].fillna('UNKNOWN')
+
+        encode_dict = {}
+        for value in joined[column].unique():
+            encode_dict[value] = encode(value)
+
+        joined[column] = joined[column].map(encode_dict)
+        assert joined[column].isnull().sum() == 0
+
+    print 'dropping = ', to_drop
+    joined = joined.drop(to_drop, 1)
+
+    joined['sum_of_cats_0'] = (joined_t[cats_old] == 0).sum(axis=1)
+    joined['sum_of_cats_0_71'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+    joined = joined.fillna(0)
+
+    if add_aggregates:
+        for column in [x for x in joined_t.columns if 'cat' in x]:
+            mean_mapping = train.groupby(column)['loss'].mean()
+            median_mapping = train.groupby(column)['loss'].median()
+            std_mapping = train.groupby(column)['loss'].std()
+            max_mapping = train.groupby(column)['loss'].max()
+            min_mapping = train.groupby(column)['loss'].min()
+            joined[column + '_mean'] = joined_t[column].map(mean_mapping)
+            joined[column + '_median'] = joined_t[column].map(median_mapping)
+            joined[column + '_std'] = joined_t[column].map(std_mapping)
+            joined[column + '_max'] = joined_t[column].map(max_mapping)
+            joined[column + '_min'] = joined_t[column].map(min_mapping)
+
+    joined['sum_of_cats_0'] = (joined_t[cats_old] == 0).sum(axis=1)
+    joined['sum_of_cats_0_71'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+    joined = joined.fillna(0)
+
+    print 'scaling'
+    ss = StandardScaler()
+    joined[numeric_feats] = ss.fit_transform(joined[numeric_feats].values)
+    X_train = joined.iloc[:ntrain, :]
+    X_test = joined.iloc[ntrain:, :]
+    y_train = np.sqrt(np.sqrt(X_train['loss'].values))
+    y_mean = y_train.mean()
+
+    return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
+
+
 def classes(y, bins):
-    hist, bin_edges = np.histogram(y, bins=bins)
-    return map(lambda x: np.searchsorted(bin_edges, x), y)
+    """
+
+    :param y: list of targets
+    :param bins:
+    :return:
+    """
+    rank_y = rankdata(y, method='ordinal') / len(y)
+    hist, bin_edges = np.histogram(rank_y, bins=bins)
+    result = np.array(map(lambda x: np.searchsorted(bin_edges, x, side='left'), rank_y))
+    result[result == 0] = 1
+    result -= 1
+
+    print min(result)
+    print max(result)
+    assert min(result) == 0
+    assert max(result) == bins - 1
+    return result
