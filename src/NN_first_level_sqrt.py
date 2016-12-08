@@ -18,7 +18,7 @@ from keras.models import Sequential
 from keras.optimizers import Nadam
 from keras.layers import Dense, Dropout, Activation, BatchNormalization, Convolution1D, MaxPooling1D
 from keras.layers.advanced_activations import PReLU, ELU
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tqdm import tqdm
 import keras.backend as K
 import clean_data
@@ -71,16 +71,17 @@ def nn_model():
     # model.add(PReLU())
     # model.add(BatchNormalization())
     model.add(Dropout(0.4))
-    model.add(Dense(200, init='he_normal', activation='elu'))
+    model.add(Dense(200, activation='elu', init='he_normal'))
     # model.add(PReLU())
     # model.add(BatchNormalization())
     model.add(Dropout(0.4))
-    model.add(Dense(50, init='he_normal', activation='elu'))
+    model.add(Dense(50, activation='elu', init='he_normal'))
     # model.add(PReLU())
     # model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(1, init='he_normal'))
     return model
+
 
 xtrain, y_train, xtest, y_mean, id_test, id_train = clean_data.one_hot_categorical_sqrt(subtract_mean=True, quadratic=False)
 
@@ -107,6 +108,8 @@ batch_size = 2**7
 pred_oob = np.zeros(xtrain.shape[0])
 pred_test = np.zeros(xtest.shape[0])
 
+print xtrain.shape
+
 for i, (inTr, inTe) in enumerate(kf.split(classes, classes)):
     xtr = xtrain[inTr]
     ytr = y_train[inTr]
@@ -116,15 +119,16 @@ for i, (inTr, inTe) in enumerate(kf.split(classes, classes)):
     for j in range(nbags):
         model = nn_model()
         model.compile(loss='mae',
-                      # optimizer='adadelta',
-                      optimizer=Nadam(lr=1e-3),
+                      optimizer='adadelta',
+                      # optimizer=Nadam(lr=1e-3),
                       metrics=[f_eval]
                       )
 
         callbacks = [
             ModelCheckpoint('keras_cache/keras-regressor-' + str(i + 1) + str(j) + '.hdf5', monitor='val_loss',
                             save_best_only=True, verbose=0),
-            EarlyStopping(patience=25, monitor='val_f_eval')
+            EarlyStopping(patience=15, monitor='val_f_eval'),
+            # ReduceLROnPlateau(monitor='mse_loss', factor=0.1, patience=20, min_lr=1e-5)
         ]
 
         model.fit_generator(generator=batch_generator(xtr, ytr, batch_size, True),
@@ -132,7 +136,7 @@ for i, (inTr, inTe) in enumerate(kf.split(classes, classes)):
                             samples_per_epoch=xtr.shape[0],
                             validation_data=batch_generator(xte, yte, batch_size, False),
                             nb_val_samples=xte.shape[0],
-                                  callbacks=callbacks)
+                            callbacks=callbacks)
 
         model.load_weights('keras_cache/keras-regressor-' + str(i + 1) + str(j) + '.hdf5')
         model.compile(loss='mae',
@@ -151,10 +155,10 @@ print('Total - MAE:', mean_absolute_error((y_train + y_mean)**4, pred_oob))
 
 # train predictions
 df = pd.DataFrame({'id': id_train, 'loss': pred_oob})
-df.to_csv('oof/NN_train_p3.csv', index=False)
+df.to_csv('oof/NN_train_p11.csv', index=False)
 
 # test predictions
 pred_test /= (n_folds * nbags)
 df = pd.DataFrame({'id': id_test, 'loss': pred_test})
-df.to_csv('oof/NN_test_p3.csv', index=False)
+df.to_csv('oof/NN_test_p11.csv', index=False)
 
