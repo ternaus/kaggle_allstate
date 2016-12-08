@@ -448,10 +448,10 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 
     train = train.drop_duplicates(subset=temp_columns)
 
-    train = train.merge(pd.read_csv('../data/train_window.csv'), on='id')
+    # train = train.merge(pd.read_csv('../data/train_window.csv'), on='id')
 
     test = pd.read_csv('../data/test.csv')
-    test = test.merge(pd.read_csv('../data/test_window.csv'), on='id')
+    # test = test.merge(pd.read_csv('../data/test_window.csv'), on='id')
 
     numeric_feats = [x for x in train.columns if 'cont' in x]
 
@@ -465,6 +465,9 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     joined['state'] = pd.factorize(joined['state'], sort=True)[0]
     joined['census_region'] = pd.factorize(joined['census_region'], sort=True)[0]
     joined['timezone'] = pd.factorize(joined['timezone'], sort=True)[0]
+
+    for column in tqdm(temp_columns):
+        joined[column.upper() + '_count'] = joined[column].map(joined.groupby(column)[column].count())
 
     joined_t = joined.copy()
     cats_old = [x for x in joined_t.columns if 'cat' in x]
@@ -503,10 +506,6 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     print 'dropping = ', to_drop
     joined = joined.drop(to_drop, 1)
 
-    joined['sum_of_cats_0'] = (joined_t[cats_old] == 0).sum(axis=1)
-    joined['sum_of_cats_0_71'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
-    joined = joined.fillna(0)
-
     if add_aggregates:
         for column in [x for x in joined_t.columns if 'cat' in x]:
             mean_mapping = train.groupby(column)['loss'].mean()
@@ -525,7 +524,7 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 
     joined = joined.fillna(0)
 
-    print 'scaling'
+    # print 'scaling'
     # ss = StandardScaler()
     # joined[numeric_feats] = ss.fit_transform(joined[numeric_feats].values)
     X_train = joined.iloc[:ntrain, :]
