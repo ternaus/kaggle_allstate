@@ -453,21 +453,44 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     test = pd.read_csv('../data/test.csv')
     # test = test.merge(pd.read_csv('../data/test_window.csv'), on='id')
 
-    numeric_feats = [x for x in train.columns if 'cont' in x]
+    # numeric_feats = [x for x in train.columns if 'cont' in x]
 
-    joined, ntrain = mungeskewed(train, test, numeric_feats)
+    # joined, ntrain = mungeskewed(train, test, numeric_feats)
+    joined = pd.concat([train, test])
+    ntrain = train.shape[0]
 
     # Adding extra features
     joined['state'] = joined['cat112'].map(_get_state())
     joined['census_region'] = joined['state'].map(_get_census_region())
     joined['timezone'] = joined['state'].map(_get_timezone())
 
-    joined['state'] = pd.factorize(joined['state'], sort=True)[0]
+    # joined['state'] = pd.factorize(joined['state'], sort=True)[0]
+    joined = joined.drop('state', 1)
     joined['census_region'] = pd.factorize(joined['census_region'], sort=True)[0]
     joined['timezone'] = pd.factorize(joined['timezone'], sort=True)[0]
 
-    for column in tqdm(temp_columns):
-        joined[column.upper() + '_count'] = joined[column].map(joined.groupby(column)[column].count())
+    # for column in tqdm(temp_columns):
+    #     joined[column.upper() + '_count'] = joined[column].map(joined.groupby(column)[column].count())
+
+    min_cont14 = np.diff(joined['cont14'])
+    min_cont14 = min_cont14[min_cont14 > 0].min()
+    joined['cont14'] = (joined['cont14'] / min_cont14).astype(int)
+
+    # joined['cont14_7'] = joined['cont14'] % 7
+    # joined['cont14_365'] = joined['cont14'] % 365
+    # joined['cont14_24'] = joined['cont14'] % 24
+    # joined['cont14_60'] = joined['cont14'] % 60
+    # joined['cont14_5'] = joined['cont14'] % 5
+
+    min_cont7 = np.diff(joined['cont7'])
+    min_cont7 = min_cont7[min_cont7 > 0].min()
+    joined['cont7'] = (joined['cont7'] / min_cont7).astype(int)
+
+    # joined['cont7_7'] = joined['cont7'] % 7
+    # joined['cont7_365'] = joined['cont7'] % 365
+    # joined['cont7_24'] = joined['cont7'] % 24
+    # joined['cont7_60'] = joined['cont7'] % 60
+    # joined['cont7_5'] = joined['cont7'] % 5
 
     joined_t = joined.copy()
     cats_old = [x for x in joined_t.columns if 'cat' in x]
