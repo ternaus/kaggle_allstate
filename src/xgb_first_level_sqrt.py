@@ -7,7 +7,7 @@ import xgboost as xgb
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import StratifiedKFold
 from pylab import *
-from tqdm import tqdm
+
 from sklearn.utils import shuffle
 import clean_data
 
@@ -42,13 +42,13 @@ print X_train.shape, X_test.shape
 
 RANDOM_STATE = 2016
 xgb_params = {
-    # 'min_child_weight': 100,
+    'min_child_weight': 100,
     'eta': 0.01,
     'colsample_bytree': 0.5,
     'max_depth': 13,
     'subsample': 0.8,
-    'alpha': 5,
-    # 'lambda': 5,
+    # 'alpha': 5,
+    'lambda': 5,
     'gamma': 1,
     'silent': 1,
     # 'base_score': y_mean,
@@ -121,10 +121,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/xgb_train_s10.csv', index=False)
+oof_train.to_csv('oof/xgb_train_s11.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/xgb_test_s10.csv', index=False)
+oof_test.to_csv('oof/xgb_test_s11.csv', index=False)
 
