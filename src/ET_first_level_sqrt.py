@@ -72,8 +72,8 @@ xg_oof_train, xg_oof_test = get_oof(et)
 print("et-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': train_ids, 'loss': xg_oof_train[:, 0]})
-oof_train.to_csv('oof/et_train_s1.csv', index=False)
+oof_train.to_csv('oof/et_train_s2.csv', index=False)
 
 oof_test = pd.DataFrame({'id': test_ids, 'loss': xg_oof_test[:, 0]})
-oof_test.to_csv('oof/et_test_s1.csv', index=False)
+oof_test.to_csv('oof/et_test_s2.csv', index=False)
 
