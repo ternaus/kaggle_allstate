@@ -26,7 +26,7 @@ et_params = {
     'n_jobs': -1,
     'n_estimators': 1000,
     'max_features': 0.5044,
-    'max_depth': 15,
+    'max_depth': 28,
     'min_samples_leaf': 2,
 }
 
@@ -72,8 +72,8 @@ xg_oof_train, xg_oof_test = get_oof(rf)
 print("rf-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': train_ids, 'loss': xg_oof_train[:, 0]})
-oof_train.to_csv('oof/rf_train_s1.csv', index=False)
+oof_train.to_csv('oof/rf_train_s2.csv', index=False)
 
 oof_test = pd.DataFrame({'id': test_ids, 'loss': xg_oof_test[:, 0]})
-oof_test.to_csv('oof/rf_test_s1.csv', index=False)
+oof_test.to_csv('oof/rf_test_s2.csv', index=False)
 
