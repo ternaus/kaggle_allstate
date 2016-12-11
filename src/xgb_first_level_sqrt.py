@@ -63,7 +63,7 @@ num_test = test.shape[0]
 
 kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 
-classes = clean_data.classes(y_train, bins=100)
+classes = clean_data.classes(y_train, bins=200)
 
 
 class XgbWrapper(object):
@@ -77,7 +77,7 @@ class XgbWrapper(object):
         self.param['seed'] = seed
         dval = xgb.DMatrix(x_val, label=y_val)
         watchlist = [(dtrain, 'train'), (dval, 'val')]
-        self.gbdt = xgb.train(self.param, dtrain, self.nrounds, watchlist, obj=logregobj, feval=evalerror, early_stopping_rounds=50)
+        self.gbdt = xgb.train(self.param, dtrain, self.nrounds, watchlist, obj=logregobj, feval=evalerror, early_stopping_rounds=100)
 
     def predict(self, x):
         return self.gbdt.predict(xgb.DMatrix(x))
@@ -121,10 +121,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/xgb_train_s13.csv', index=False)
+oof_train.to_csv('oof/xgb_train_s14.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/xgb_test_s13.csv', index=False)
+oof_test.to_csv('oof/xgb_test_s14.csv', index=False)
 
