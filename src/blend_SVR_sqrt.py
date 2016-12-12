@@ -8,12 +8,9 @@ import pandas as pd
 
 import sys
 
-sys.path += ['/home/vladimir/packages/xgboost/python-package']
-
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
-from sklearn.linear_model import Ridge
 from sklearn.metrics import make_scorer
 from pylab import *
 import clean_data
@@ -139,8 +136,15 @@ rf_test_s2 = pd.read_csv('oof/rf_test_s2.csv').rename(columns={'loss': 'rf_loss_
 lr_train = pd.read_csv('oof/lr_train_sqrt.csv').rename(columns={'loss': 'lr_loss'})
 lr_test = pd.read_csv('oof/lr_test_sqrt.csv').rename(columns={'loss': 'lr_loss'})
 
+lr_train_1 = pd.read_csv('oof/lr_train_sqrt_1.csv').rename(columns={'loss': 'lr_loss_1'})
+lr_test_1 = pd.read_csv('oof/lr_test_sqrt_1.csv').rename(columns={'loss': 'lr_loss_1'})
+
+
 svr_train = pd.read_csv('oof/svr_train_sqrt.csv').rename(columns={'loss': 'svr_loss'})
 svr_test = pd.read_csv('oof/svr_test_sqrt.csv').rename(columns={'loss': 'svr_loss'})
+
+svr_train_1 = pd.read_csv('oof/svr_train_sqrt_1.csv').rename(columns={'loss': 'svr_loss_1'})
+svr_test_1 = pd.read_csv('oof/svr_test_sqrt_1.csv').rename(columns={'loss': 'svr_loss_1'})
 
 
 X_train = (train[['id', 'loss']]
@@ -180,7 +184,9 @@ X_train = (train[['id', 'loss']]
            .merge(rf_train_s1, on='id')
             .merge(rf_train_s2, on='id')
             .merge(lr_train, on='id')
+            .merge(lr_train_1, on='id')
             .merge(svr_train, on='id')
+            .merge(svr_train_1, on='id')
             # .merge(nn_class_train, on='id')
            )
 
@@ -221,7 +227,9 @@ X_test = (test[['id', 'cat1']]
           .merge(rf_test_s1, on='id')
           .merge(rf_test_s2, on='id')
           .merge(lr_test, on='id')
+          .merge(lr_test_1, on='id')
           .merge(svr_test, on='id')
+          .merge(svr_test_1, on='id')
           # .merge(nn_class_test, on='id')
           .drop('cat1', 1))
 
@@ -246,7 +254,7 @@ num_rounds = 300000
 RANDOM_STATE = 2016
 
 
-parameters = {'C': np.logspace(-3, 1, 10)}
+parameters = {'C': np.logspace(-3, -2, 10)}
 
 n_folds = 10
 
@@ -302,7 +310,7 @@ def get_oof(clf):
 
     return pred_oob, pred_test
 
-svr = LinearSVR(C=0.0077426368268112694)
+svr = LinearSVR(C=0.0046415888336127772)
 # svr = Ridge()
 
 svr_oof_train, svr_oof_test = get_oof(svr)
@@ -310,10 +318,10 @@ svr_oof_train, svr_oof_test = get_oof(svr)
 print("SVR-CV: {}".format(mean_absolute_error(y_train**4, svr_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': svr_oof_train})
-oof_train.to_csv('oof2/svr_train_sqrt.csv', index=False)
+oof_train.to_csv('oof2/svr_train_sqrt_3.csv', index=False)
 
 svr_oof_test /= n_folds
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': svr_oof_test})
-oof_test.to_csv('oof2/svr_test_sqrt.csv', index=False)
+oof_test.to_csv('oof2/svr_test_sqrt_3.csv', index=False)
 
