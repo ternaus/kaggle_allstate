@@ -1,5 +1,5 @@
 """
-Blending models NN
+Blending models
 """
 
 from __future__ import division
@@ -7,23 +7,19 @@ from __future__ import division
 import pandas as pd
 
 import sys
-from keras import backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from keras.models import Model, Sequential
-from keras.layers import Input, BatchNormalization, Dropout, PReLU, MaxoutDense, Dense
-from keras.optimizers import Adam, Nadam, Adadelta
-from keras.regularizers import l1l2
-from keras.layers.noise import GaussianNoise
-from keras.layers.core import Activation
-
-sys.path += ['/home/vladimir/packages/xgboost/python-package']
 
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer
 from pylab import *
-from sklearn.utils import shuffle
-
 import clean_data
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVR, SVR
+
+
+def eval_f(x, y):
+    return mean_absolute_error(x**4, y**4)
 
 
 train = pd.read_csv('../data/train.csv')
@@ -245,93 +241,87 @@ X_test_id = X_test['id'].values
 X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 X_test = X_test.drop('id', 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 
-X_test = np.hstack([X_test, nn_class_test.drop('id', 1).values])
-X_train = np.hstack([X_train, nn_class_train.drop('id', 1).values])
+# scaler = StandardScaler()
+# X_train = scaler.fit_transform(X_train)
+# X_test = scaler.transform(X_test)
 
+# X_test = np.hstack([X_test, nn_class_test.drop('id', 1).values])
+# X_train = np.hstack([X_train, nn_class_train.drop('id', 1).values])
+
+test_ids = test['id']
+
+num_rounds = 300000
 RANDOM_STATE = 2016
 
 
-def nn_model():
-    model = Sequential()
-    model.add(Dense(100, input_dim=X_train.shape[1], init='he_normal', activation='elu'))
-    # model.add(Dropout(0.5))
-    model.add(Dense(100, init='he_normal', activation='elu'))
-    model.add(Dense(1, init='he_normal'))
-    return model
-
-
-def f_eval(y_true, y_pred):
-    return K.mean(K.abs(y_pred**4 - y_true**4))
+parameters = {'C': np.logspace(-3, -2, 10)}
 
 n_folds = 10
-scores = []
+
+kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
+classes = clean_data.classes(y_train, bins=100)
+
+# svr = LinearSVR(random_state=RANDOM_STATE)
+#
+#
+# clf = GridSearchCV(svr, parameters, n_jobs=-1, cv=kf.get_n_splits(classes, classes), scoring=make_scorer(eval_f),
+#                    iid=False, verbose=2)
+#
+# clf.fit(X_train, y_train)
+#
+# for i in clf.grid_scores_:
+#     print i
+
+num_train = X_train.shape[0]
+num_test = X_test.shape[0]
 
 classes = clean_data.classes(y_train, bins=100)
 
-nbags = 5
 
-pred_oob = np.zeros((X_train.shape[0], nbags))
-pred_test = np.zeros((X_test.shape[0], n_folds * nbags))
-
-print pred_test.shape
-
-for i, (inTr, inTe) in enumerate(StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE).split(classes, classes)):
-    xtr = X_train[inTr]
-    ytr = y_train[inTr]
-    xte = X_train[inTe]
-    yte = y_train[inTe]
-    # pred = np.zeros(xte.shape[0])
-
-    for j in range(nbags):
-        xtr, ytr = shuffle(xtr, ytr, random_state=RANDOM_STATE)
-        model = nn_model()
-        model.compile(loss='mae',
-                      optimizer='adadelta',
-                      # optimizer=Nadam(lr=1e-2),
-                      metrics=[f_eval],
-                      )
-        callbacks = [
-            ModelCheckpoint('keras_cache/keras-regressor-' + str(i + 1) + '.hdf5', monitor='val_loss', save_best_only=True, verbose=0),
-            EarlyStopping(patience=25, monitor='val_f_eval'),
-            # ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, min_lr=0.001)
-        ]
-        model.fit(xtr, ytr,
-                  # batch_size=2**6,
-                  validation_data=(xte, yte),
-                  nb_epoch=2000,
-                  callbacks=callbacks)
-
-        model.load_weights('keras_cache/keras-regressor-' + str(i + 1) + '.hdf5')
-        model.compile(loss='mae',
-                      optimizer='adadelta',
-                      # optimizer=Nadam(lr=1e-3),
-                      metrics=[f_eval])
-
-        pred_oob[inTe, j] = model.predict(xte)[:, 0]**4
-
-        print('Total - MAE:', mean_absolute_error(yte**4, pred_oob[inTe, j]))
-        pred_test[:, j * n_folds + i - 1] = model.predict(X_test)[:, 0]**4
+nbags = 1
 
 
-pred_oob_median = np.median(pred_oob, axis=1)
-pred_oob_mean = np.mean(pred_oob, axis=1)
+def get_oof(clf):
+    pred_oob = np.zeros(X_train.shape[0])
+    pred_test = np.zeros(X_test.shape[0])
 
-pred_test_median = np.median(pred_test, axis=1)
-pred_test_mean = np.mean(pred_test, axis=1)
+    for i, (train_index, test_index) in enumerate(kf.split(classes, classes)):
+        print "Fold = ", i
+        x_tr = X_train[train_index]
+        y_tr = y_train[train_index]
 
+        x_te = X_train[test_index]
+        y_te = y_train[test_index]
 
-print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob_median))
-print('Total - MAE:', mean_absolute_error(y_train**4, pred_oob_mean))
+        pred = np.zeros(x_te.shape[0])
 
-# train predictions
-df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob_median})
-df.to_csv('oof2/NN_train_s8_median.csv', index=False)
+        for j in range(nbags):
+            # x_tr, y_tr = shuffle(x_tr, y_tr, random_state=RANDOM_STATE + i + j)
+            clf.fit(x_tr, y_tr)
+            print clf.coef_
 
-df = pd.DataFrame({'id': X_train_id, 'loss': pred_oob_mean})
-df.to_csv('oof2/NN_train_s8_mean.csv', index=False)
+            pred += clf.predict(x_te)**4
+            pred_test += clf.predict(X_test)**4
 
-df = pd.DataFrame({'id': X_test_id, 'loss': pred_test_median})
-df.to_csv('oof2/NN_test_s8_median.csv', index=False)
+        pred /= nbags
+        pred_oob[test_index] = pred
+        score = mean_absolute_error(y_te**4, pred)
+        print('Fold ', i, '- MAE:', score)
 
-df = pd.DataFrame({'id': X_test_id, 'loss': pred_test_mean})
-df.to_csv('oof2/NN_test_s8_mean.csv', index=False)
+    return pred_oob, pred_test
+
+svr = LinearSVR(C=0.0035938136638046258)
+# svr = Ridge()
+
+svr_oof_train, svr_oof_test = get_oof(svr)
+
+print("SVR-CV: {}".format(mean_absolute_error(y_train**4, svr_oof_train)))
+
+oof_train = pd.DataFrame({'id': X_train_id, 'loss': svr_oof_train})
+oof_train.to_csv('oof2/svr_train_sqrt_5.csv', index=False)
+
+svr_oof_test /= n_folds
+
+oof_test = pd.DataFrame({'id': X_test_id, 'loss': svr_oof_test})
+oof_test.to_csv('oof2/svr_test_sqrt_5.csv', index=False)
+
