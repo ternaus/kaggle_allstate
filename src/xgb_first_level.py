@@ -26,8 +26,9 @@ def logregobj(preds, dtrain):
     labels = dtrain.get_label()
     con = 2
     x = preds - labels
-    grad = con * x / (np.abs(x) + con)
-    hess = con**2 / (np.abs(x) + con)**2
+    den = np.abs(x) + con
+    grad = con * x / den
+    hess = con**2 / den**2
     return grad, hess
 
 shift = 200

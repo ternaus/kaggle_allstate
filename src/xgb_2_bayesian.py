@@ -3,170 +3,126 @@ Baysian hyperparameter optimization [https://github.com/fmfn/BayesianOptimizatio
 for Mean Absoulte Error objective
 on default features for https://www.kaggle.com/c/allstate-claims-severity
 """
+from __future__ import division
 
 __author__ = "Vladimir Iglovikov"
 
-import pandas as pd
-from sklearn.metrics import mean_absolute_error
 from bayes_opt import BayesianOptimization
+import pandas as pd
 
-import numpy as np
+import sys
 
-import os
 import xgboost as xgb
-from sklearn.utils import shuffle
+from sklearn.metrics import mean_absolute_error
+from pylab import *
+
+
+def logregobj(preds, dtrain):
+    labels = dtrain.get_label()
+    con = 2
+    x = preds - labels
+    den = np.abs(x) + con
+    grad = con * x / den
+    hess = con**2 / den**2
+    return grad, hess
 
 
 def evalerror(preds, dtrain):
-    labels = dtrain.get_label()
-    return 'mae', mean_absolute_error(np.exp(preds), np.exp(labels))
-
-
+    labels = dtrain.get_labels()
+    return 'mae', mean_absolute_error(preds**4, labels**4)
 
 
 if __name__ == '__main__':
     num_rounds = 10000
     random_state = 2016
     num_iter = 100
-    init_points = 100
-    shift = 0
+    init_points = 10000
+
+    sys.path += ['/home/vladimir/packages/xgboost/python-package']
 
     train = pd.read_csv('../data/train.csv')
     test = pd.read_csv('../data/test.csv')
 
-    xgb_train_0 = pd.read_csv('oof/xgb_train.csv').rename(columns={'loss': 'xgb_loss_0'})
-    xgb_test_0 = pd.read_csv('oof/xgb_test.csv').rename(columns={'loss': 'xgb_loss_0'})
+    xgb_train_1 = pd.read_csv('oof/xgb_train_t1.csv').rename(columns={'loss': 'xgb_loss_1'})
+    xgb_test_1 = pd.read_csv('oof/xgb_test_t1.csv').rename(columns={'loss': 'xgb_loss_1'})
 
-    xgb_train = pd.read_csv('oof/xgb_train_t.csv').rename(columns={'loss': 'xgb_loss'})
-    xgb_test = pd.read_csv('oof/xgb_test_t.csv').rename(columns={'loss': 'xgb_loss'})
+    xgb_train_s1 = pd.read_csv('oof/xgb_train_s1.csv').rename(columns={'loss': 'xgb_loss_s1'})
+    xgb_test_s1 = pd.read_csv('oof/xgb_test_s1.csv').rename(columns={'loss': 'xgb_loss_s1'})
 
-    xgb_train_1 = pd.read_csv('oof/xgb_train_t.csv').rename(columns={'loss': 'xgb_loss_1'})
-    xgb_test_1 = pd.read_csv('oof/xgb_test_t.csv').rename(columns={'loss': 'xgb_loss_1'})
+    xgb_train_s2 = pd.read_csv('oof/xgb_train_s2.csv').rename(columns={'loss': 'xgb_loss_s2'})
+    xgb_test_s2 = pd.read_csv('oof/xgb_test_s2.csv').rename(columns={'loss': 'xgb_loss_s2'})
 
-    xgb_train_2 = pd.read_csv('oof/xgb_train_t2.csv').rename(columns={'loss': 'xgb_loss_2'})
-    xgb_test_2 = pd.read_csv('oof/xgb_test_t2.csv').rename(columns={'loss': 'xgb_loss_2'})
+    xgb_train_s3 = pd.read_csv('oof/xgb_train_s3.csv').rename(columns={'loss': 'xgb_loss_s3'})
+    xgb_test_s3 = pd.read_csv('oof/xgb_test_s3.csv').rename(columns={'loss': 'xgb_loss_s3'})
 
-    xgb_train_3 = pd.read_csv('oof/xgb_train_t3.csv').rename(columns={'loss': 'xgb_loss_3'})
-    xgb_test_3 = pd.read_csv('oof/xgb_test_t3.csv').rename(columns={'loss': 'xgb_loss_3'})
+    xgb_train_s4 = pd.read_csv('oof/xgb_train_s4.csv').rename(columns={'loss': 'xgb_loss_s4'})
+    xgb_test_s4 = pd.read_csv('oof/xgb_test_s4.csv').rename(columns={'loss': 'xgb_loss_s4'})
 
-    xgb_train_4 = pd.read_csv('oof/xgb_train_t4.csv').rename(columns={'loss': 'xgb_loss_4'})
-    xgb_test_4 = pd.read_csv('oof/xgb_test_t4.csv').rename(columns={'loss': 'xgb_loss_4'})
+    nn_train_1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_1'})
+    nn_test_1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_1'})
 
-    xgb_train_5 = pd.read_csv('oof/xgb_train_t5.csv').rename(columns={'loss': 'xgb_loss_5'})
-    xgb_test_5 = pd.read_csv('oof/xgb_test_t5.csv').rename(columns={'loss': 'xgb_loss_5'})
+    nn_train_2 = pd.read_csv('oof/NN_train_p2.csv').rename(columns={'loss': 'nn_loss_2'})
+    nn_test_2 = pd.read_csv('oof/NN_test_p2.csv').rename(columns={'loss': 'nn_loss_2'})
 
-    xgb_train_6 = pd.read_csv('oof/xgb_train_t6.csv').rename(columns={'loss': 'xgb_loss_6'})
-    xgb_test_6 = pd.read_csv('oof/xgb_test_t6.csv').rename(columns={'loss': 'xgb_loss_6'})
-
-    nn_train = pd.read_csv('oof/NN_train.csv').rename(columns={'loss': 'nn_loss'})
-    nn_test = pd.read_csv('oof/NN_test.csv').rename(columns={'loss': 'nn_loss'})
-
-    nn_train_1 = pd.read_csv('oof/NN_train_1.csv').rename(columns={'loss': 'nn_loss_1'})
-    nn_test_1 = pd.read_csv('oof/NN_test_1.csv').rename(columns={'loss': 'nn_loss_1'})
-
-    nn_train_2 = pd.read_csv('oof/NN_train_2.csv').rename(columns={'loss': 'nn_loss_1'})
-    nn_test_2 = pd.read_csv('oof/NN_test_2.csv').rename(columns={'loss': 'nn_loss_1'})
-
-    nn_train_4 = pd.read_csv('oof/NN_train_4.csv').rename(columns={'loss': 'nn_loss_4'})
-    nn_test_4 = pd.read_csv('oof/NN_test_4.csv').rename(columns={'loss': 'nn_loss_4'})
-
-    nn_train_p1 = pd.read_csv('oof/NN_train_p1.csv').rename(columns={'loss': 'nn_loss_p1'})
-    nn_test_p1 = pd.read_csv('oof/NN_test_p1.csv').rename(columns={'loss': 'nn_loss_p1'})
-
-    nn_train_p2 = pd.read_csv('oof/NN_train_p2.csv').rename(columns={'loss': 'nn_loss_p3'})
-    nn_test_p2 = pd.read_csv('oof/NN_test_p2.csv').rename(columns={'loss': 'nn_loss_p3'})
-
-    nn_train_p3 = pd.read_csv('oof/NN_train_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
-    nn_test_p3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_p3'})
-
-    nn_train_p4 = pd.read_csv('oof/NN_train_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
-    nn_test_p4 = pd.read_csv('oof/NN_test_p4.csv').rename(columns={'loss': 'nn_loss_p4'})
-
-    et_train = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
-    et_test = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
-
-    rf_train = pd.read_csv('oof/rf_train.csv').rename(columns={'loss': 'rf_loss'})
-    rf_test = pd.read_csv('oof/rf_test.csv').rename(columns={'loss': 'rf_loss'})
-
-    #
-    # lr_train = pd.read_csv('oof/lr_train.csv').rename(columns={'loss': 'lr_loss'})
-    # lr_test = pd.read_csv('oof/lr_test.csv').rename(columns={'loss': 'lr_loss'})
-
-    lgbt_train = pd.read_csv('oof/lgbt_train.csv').rename(columns={'loss': 'lgbt_loss'})
-    lgbt_test = pd.read_csv('oof/lgbt_test.csv').rename(columns={'loss': 'lgbt_loss'})
+    nn_train_3 = pd.read_csv('oof/NN_train_p3.csv').rename(columns={'loss': 'nn_loss_3'})
+    nn_test_3 = pd.read_csv('oof/NN_test_p3.csv').rename(columns={'loss': 'nn_loss_3'})
 
     lgbt_train_1 = pd.read_csv('oof/lgbt_train_1.csv').rename(columns={'loss': 'lgbt_loss_1'})
     lgbt_test_1 = pd.read_csv('oof/lgbt_test_1.csv').rename(columns={'loss': 'lgbt_loss_1'})
 
-    knn_numeric_train = pd.read_csv('oof/knn_numeric_train.csv').rename(columns={'loss': 'knn_numeric_loss'})
-    knn_numeric_test = pd.read_csv('oof/knn_numeric_test.csv').rename(columns={'loss': 'knn_numeric_loss'})
+    et_train_1 = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
+    et_test_1 = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
+
+    et_train_s1 = pd.read_csv('oof/et_train_s1.csv').rename(columns={'loss': 'et_loss_s1'})
+    et_test_s1 = pd.read_csv('oof/et_test_s1.csv').rename(columns={'loss': 'et_loss_s1'})
+
+    rf_train_s1 = pd.read_csv('oof/rf_train_s1.csv').rename(columns={'loss': 'rf_loss_s1'})
+    rf_test_s1 = pd.read_csv('oof/rf_test_s1.csv').rename(columns={'loss': 'rf_loss_s1'})
 
     X_train = (train[['id', 'loss']]
-               .merge(xgb_train_0, on='id')
-               .merge(xgb_train, on='id')
-               # .merge(xgb_train_1, on='id')
-               #  .merge(xgb_train_2, on='id')
-               .merge(xgb_train_3, on='id')
-               .merge(xgb_train_4, on='id')
-               .merge(xgb_train_5, on='id')
-               .merge(xgb_train_6, on='id')
-               .merge(nn_train, on='id')
+               .merge(xgb_train_1, on='id')
+               .merge(xgb_train_s1, on='id')
+               .merge(xgb_train_s2, on='id')
+               .merge(xgb_train_s3, on='id')
+               .merge(xgb_train_s4, on='id')
                .merge(nn_train_1, on='id')
                .merge(nn_train_2, on='id')
-               .merge(nn_train_4, on='id')
-               .merge(nn_train_p1, on='id')
-               .merge(nn_train_p2, on='id')
-               .merge(nn_train_p3, on='id')
-               .merge(nn_train_p4, on='id')
-               .merge(et_train, on='id')
-               .merge(rf_train, on='id')
-               # .merge(lr_train, on='id')
-               #  .merge(lgbt_train, on='id')
-               #  .merge(lgbt_train_1, on='id')
-               # .merge(knn_numeric_train, on='id')
+               .merge(nn_train_3, on='id')
+               .merge(lgbt_train_1, on='id')
+               .merge(et_train_1, on='id')
+               .merge(et_train_s1, on='id')
+               .merge(rf_train_s1, on='id')
                )
 
     X_test = (test[['id', 'cat1']]
-              .merge(xgb_test_0, on='id')
-              .merge(xgb_test, on='id')
-              # .merge(xgb_test_1, on='id')
-              #   .merge(xgb_test_2, on='id')
-              .merge(xgb_test_3, on='id')
-              .merge(xgb_test_4, on='id')
-              .merge(xgb_test_5, on='id')
-              .merge(xgb_test_6, on='id')
-              .merge(nn_test, on='id')
+              .merge(xgb_test_1, on='id')
+              .merge(xgb_test_s1, on='id')
+              .merge(xgb_test_s2, on='id')
+              .merge(xgb_test_s3, on='id')
+              .merge(xgb_test_s4, on='id')
               .merge(nn_test_1, on='id')
               .merge(nn_test_2, on='id')
-              .merge(nn_test_4, on='id')
-              .merge(nn_test_p1, on='id')
-              .merge(nn_test_p2, on='id')
-              .merge(nn_test_p3, on='id')
-              .merge(nn_test_p4, on='id')
-              .merge(et_test, on='id')
-              .merge(rf_test, on='id')
-              # .merge(lr_test, on='id')
-              # .merge(lgbt_test, on='id')
-              # .merge(lgbt_test_1, on='id')
-              # .merge(knn_numeric_test, on='id')
+              .merge(nn_test_3, on='id')
+              .merge(lgbt_test_1, on='id')
+              .merge(et_test_1, on='id')
+              .merge(et_test_s1, on='id')
+              .merge(rf_test_s1, on='id')
               .drop('cat1', 1))
 
-    shift = 200
+    y_train = np.sqrt(np.sqrt(X_train['loss'].values))
 
-    y_train = np.log(X_train['loss'] + shift)
-    print X_train.info()
+    X_train_id = X_train['id'].values
+    X_test_id = X_test['id'].values
 
-    X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.log(x + shift))
-    X_test = X_test.drop('id', 1).applymap(lambda x: np.log(x + shift))
+    X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
+    X_test = X_test.drop('id', 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 
     xgtrain = xgb.DMatrix(X_train, label=y_train)
 
-
     params = {
-        'eta': 0.1,
+        'eta': 0.01,
         'silent': 1,
-        'eval_metric': 'mae',
-        'verbose_eval': 1,
+        'verbose_eval': 100,
         'seed': random_state
     }
 
@@ -188,9 +144,10 @@ if __name__ == '__main__':
         params['alpha'] = max(alpha, 0)
 
         cv_result = xgb.cv(params, xgtrain, num_boost_round=num_rounds, nfold=5, stratified=False,
-                           early_stopping_rounds=50, verbose_eval=1, show_stdv=True, maximize=False, feval=evalerror)
+                           early_stopping_rounds=50, verbose_eval=False, show_stdv=True, maximize=False, feval=evalerror,
+                           obj=logregobj)
 
-        return -cv_result['test-mae-mean'].values[-1]
+        return -cv_result['test-mae-mean'].values[-50]
 
 
     xgbBO = BayesianOptimization(xgb_evaluate, {'min_child_weight': (1, 200),

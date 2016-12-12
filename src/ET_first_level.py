@@ -58,9 +58,9 @@ def get_oof(clf):
 
         clf.train(x_tr, y_tr)
 
-        oof_train[test_index] = clf.predict(x_te)
-        oof_test_skf[i, :] = clf.predict(X_test)
-        print mean_absolute_error(np.exp(y_te), np.exp(oof_train[test_index]))
+        oof_train[test_index] = np.exp(clf.predict(x_te))
+        oof_test_skf[i, :] = np.exp(clf.predict(X_test))
+        print mean_absolute_error(np.exp(y_te), oof_train[test_index])
         print
     oof_test[:] = oof_test_skf.mean(axis=0)
     return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
@@ -70,11 +70,11 @@ et = SklearnWrapper(clf=ExtraTreesRegressor, seed=RANDOM_STATE, params=et_params
 xg_oof_train, xg_oof_test = get_oof(et)
 
 
-print("et-CV: {}".format(mean_absolute_error(np.exp(y_train), np.exp(xg_oof_train))))
+print("et-CV: {}".format(mean_absolute_error(np.exp(y_train), xg_oof_train)))
 
-oof_train = pd.DataFrame({'id': train_ids, 'loss': (np.exp(xg_oof_train) - shift)[:, 0]})
-oof_train.to_csv('oof/et_train.csv', index=False)
+oof_train = pd.DataFrame({'id': train_ids, 'loss': (xg_oof_train - shift)[:, 0]})
+oof_train.to_csv('oof/et_train_2.csv', index=False)
 
-oof_test = pd.DataFrame({'id': test_ids, 'loss': (np.exp(xg_oof_test) - shift)[:, 0]})
-oof_test.to_csv('oof/et_test.csv', index=False)
+oof_test = pd.DataFrame({'id': test_ids, 'loss': (xg_oof_test - shift)[:, 0]})
+oof_test.to_csv('oof/et_test_2.csv', index=False)
 

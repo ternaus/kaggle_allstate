@@ -191,7 +191,7 @@ num_rounds = 300000
 RANDOM_STATE = 2016
 
 
-parameters = {'n_neighbors': [20], 'p': [2]}
+parameters = {'n_neighbors': [1000], 'p': [2]}
 
 n_folds = 10
 
@@ -205,7 +205,7 @@ clf = GridSearchCV(kNN, parameters, cv=kf.get_n_splits(classes, classes), scorin
 
 clf.fit(X_train, y_train)
 
-for i in clf.grid_scores_:
+for i in clf.cv_results_:
     print i
 #
 # num_train = X_train.shape[0]

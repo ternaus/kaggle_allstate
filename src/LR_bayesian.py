@@ -16,7 +16,7 @@ from scipy.stats import skew, boxcox
 import os
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 from sklearn.metrics import make_scorer
 from pylab import *
@@ -25,11 +25,13 @@ from sklearn.linear_model import ElasticNet, Ridge
 
 
 RANDOM_STATE = 2016
-n_folds = 5
+n_folds = 10
 
 
 def evalerror(preds, dtrain):
-    return mean_absolute_error(np.exp(preds), np.exp(dtrain))
+    return mean_absolute_error(preds**4, dtrain**4)
+
+
 
 
 def en_evaluate(alpha):
@@ -37,9 +39,7 @@ def en_evaluate(alpha):
     # clf = ElasticNet(alpha=alpha, l1_ratio=l1_ratio)
     clf = Ridge(alpha=alpha)
 
-    kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE).get_n_splits(X_train)
-
-    return -cross_val_score(clf, X_train, y_train, cv=kf, scoring=make_scorer(evalerror), n_jobs=-1).mean()
+    return -cross_val_score(clf, X_train, y_train, cv=kf.split(classes, classes), scoring=make_scorer(evalerror), n_jobs=-1).mean()
 
 
 if __name__ == '__main__':
@@ -47,10 +47,14 @@ if __name__ == '__main__':
     random_state = 2016
     num_iter = 100
     init_points = 10
-    shift = 200
 
-    # X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical()
-    X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical(shift=shift, quadratic=True)
+    X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical_sqrt(quadratic=True)
+
+    n_folds = 10
+
+    kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
+
+    classes = clean_data.classes(y_train, bins=100)
 
     print X_train.shape, y_train.shape
 

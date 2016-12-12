@@ -1,6 +1,6 @@
 from __future__ import division
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import AdaBoostRegressor
 import clean_data
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import mean_absolute_error
@@ -22,12 +22,13 @@ num_test = X_test.shape[0]
 classes = clean_data.classes(y_train, bins=100)
 kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 
-et_params = {
-    'n_jobs': -1,
+ad_params = {
+    # 'n_jobs': -1,
     'n_estimators': 1000,
-    'max_features': 0.5044,
-    'max_depth': 15,
-    'min_samples_leaf': 2,
+    # 'max_features': 0.5044,
+    'learning_rate': 0.1,
+    # 'max_depth': 15,
+    # 'min_samples_leaf': 2,
 }
 
 
@@ -65,15 +66,15 @@ def get_oof(clf):
     return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
 
 
-rf = SklearnWrapper(clf=RandomForestRegressor, seed=RANDOM_STATE, params=et_params)
+rf = SklearnWrapper(clf=AdaBoostRegressor, seed=RANDOM_STATE, params=ad_params)
 xg_oof_train, xg_oof_test = get_oof(rf)
 
 
-print("rf-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
+print("ad-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': train_ids, 'loss': xg_oof_train[:, 0]})
-oof_train.to_csv('oof/rf_train_s1.csv', index=False)
+oof_train.to_csv('oof/ad_train_s1.csv', index=False)
 
 oof_test = pd.DataFrame({'id': test_ids, 'loss': xg_oof_test[:, 0]})
-oof_test.to_csv('oof/rf_test_s1.csv', index=False)
+oof_test.to_csv('oof/ad_test_s1.csv', index=False)
 

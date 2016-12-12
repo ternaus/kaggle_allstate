@@ -175,8 +175,16 @@ def one_hot_categorical(shift=0, subtract_mean=False, quadratic=False):
         numeric_feats = [x for x in train.columns if 'cont' in x]
 
         joined, ntrain = mungeskewed(train, test, numeric_feats)
-        COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
-        ',')
+        # COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+        # ',')
+
+        COMB_FEATURE = ['cat79', 'cat80', 'cat12', 'cat57', 'cat87', 'cat81', 'cat53', 'cat1', 'cat44', 'cat26',
+                        'cat11', 'cat2', 'cat101', 'cat90', 'cat10', 'cat38', 'cat7', 'cat73', 'cat103', 'cat89',
+                        'cat25', 'cat111', 'cat72', 'cat114', 'cat39', 'cat31', 'cat82', 'cat75', 'cont2', 'cat77',
+                        'cat36', 'cat100', 'cat5', 'cat49', 'cat78', 'cat76', 'cat50', 'cat52', 'cat94', 'cat16',
+                        'cat27', 'cat37', 'cat13', 'cat6', 'cat3', 'cat66', 'cat4', 'cat32', 'cat9']
+        print COMB_FEATURE
+
         for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
             feat = comb[0] + "_" + comb[1]
 
@@ -244,7 +252,7 @@ def one_hot_categorical_sqrt(subtract_mean=False, quadratic=False):
 
     test = pd.read_csv('../data/test.csv')
 
-    ## set test loss to NaN
+    # set test loss to NaN
     test['loss'] = np.nan
 
     # response and IDs
@@ -262,6 +270,66 @@ def one_hot_categorical_sqrt(subtract_mean=False, quadratic=False):
     ntrain = train.shape[0]
     joined = pd.concat((train, test), axis=0)
 
+    cat_80_mean_mapping = train.groupby('cat80')['loss'].mean()
+    # cat_80_median_mapping = train.groupby('cat80')['loss'].median()
+    cat_80_std_mapping = train.groupby('cat80')['loss'].std()
+    # cat_80_var_mapping = train.groupby('cat80')['loss'].var()
+
+    joined['CAT80_mean'] = joined['cat80'].map(cat_80_mean_mapping)
+    # joined['CAT80_median'] = joined['cat80'].map(cat_80_median_mapping)
+    joined['CAT80_std'] = joined['cat80'].map(cat_80_std_mapping)
+    # joined['CAT80_var'] = joined['cat80'].map(cat_80_var_mapping)
+
+    ntrain = train.shape[0]
+
+    # Adding extra features
+    joined['state'] = joined['cat112'].map(_get_state())
+    joined['census_region'] = joined['state'].map(_get_census_region())
+    joined['timezone'] = joined['state'].map(_get_timezone())
+    joined = joined.drop('state', 1)
+
+    # joined['state'] = pd.factorize(joined['state'], sort=True)[0]
+    joined['census_region'] = pd.factorize(joined['census_region'], sort=True)[0]
+    joined['timezone'] = pd.factorize(joined['timezone'], sort=True)[0]
+
+    # for column in tqdm(temp_columns):
+    #     joined[column.upper() + '_count'] = joined[column].map(joined.groupby(column)[column].count())
+
+    min_cont14 = np.diff(joined['cont14'])
+    min_cont14 = min_cont14[min_cont14 > 0].min()
+    joined['cont14'] = (joined['cont14'] / min_cont14).astype(int)
+
+    # cont14_mapping_up = dict(zip(sorted(joined['cont14'].unique())[:-1], sorted(joined['cont14'].unique())[1:]))
+    # cont14_mapping_dn = dict(zip(sorted(joined['cont14'].unique())[1:], sorted(joined['cont14'].unique())[:-1]))
+
+    # joined['cont14_up'] = joined['cont14'].map(cont14_mapping_up)
+    # joined['cont14_dn'] = joined['cont14'].map(cont14_mapping_dn)
+    #
+    # joined['cont14-up'] = joined['cont14'] - joined['cont14_up']
+    # joined['cont14-dn'] = joined['cont14'] - joined['cont14_dn']
+
+    # joined['cont14_7'] = joined['cont14'] % 7
+    # joined['cont14_365'] = joined['cont14'] % 365
+    # joined['cont14_24'] = joined['cont14'] % 24
+    # joined['cont14_60'] = joined['cont14'] % 60
+    # joined['cont14_5'] = joined['cont14'] % 5
+
+    min_cont7 = np.diff(joined['cont7'])
+    min_cont7 = min_cont7[min_cont7 > 0].min()
+    joined['cont7'] = (joined['cont7'] / min_cont7).astype(int)
+
+    cont7_mapping_up = dict(zip(sorted(joined['cont7'].unique())[:-1], sorted(joined['cont7'].unique())[1:]))
+    cont7_mapping_dn = dict(zip(sorted(joined['cont7'].unique())[1:], sorted(joined['cont7'].unique())[:-1]))
+
+    joined['cont7_up'] = joined['cont7'].map(cont7_mapping_up)
+    joined['cont7_dn'] = joined['cont7'].map(cont7_mapping_dn)
+
+    joined['cont14-cont7'] = joined['cont14'] - joined['cont7']
+
+    joined['cont7-up'] = joined['cont7'] - joined['cont7_up']
+    joined['cont7-dn'] = joined['cont7'] - joined['cont7_dn']
+
+
     joined_t = joined.copy()
     cats_old = [x for x in joined_t.columns if 'cat' in x]
 
@@ -272,8 +340,13 @@ def one_hot_categorical_sqrt(subtract_mean=False, quadratic=False):
         numeric_feats = [x for x in train.columns if 'cont' in x]
 
         joined, ntrain = mungeskewed(train, test, numeric_feats)
-        COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
-        ',')
+        COMB_FEATURE = ['cat80', 'cat79', 'cat12', 'cat57', 'cat87', 'cat81', 'cat53', 'cat1', 'cat44', 'cat26',
+                        'cat11', 'cat2', 'cat101', 'cat90', 'cat10', 'cat38', 'cat7', 'cat73', 'cat103', 'cat89',
+                        'cat25', 'cat111', 'cat72', 'cat114', 'cat39', 'cat31', 'cat82', 'cat75', 'cat77', 'cat36']
+                        # 'cat100', 'cat5']
+        # , 'cat49', 'cat78', 'cat76', 'cat50', 'cat52', 'cat94', 'cat16']
+        # COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+        # ',')
         for comb in tqdm(list(itertools.combinations(COMB_FEATURE, 2))):
             feat = comb[0] + "_" + comb[1]
 
@@ -300,8 +373,12 @@ def one_hot_categorical_sqrt(subtract_mean=False, quadratic=False):
     sparse_data = []
 
     for f in tqdm(cat_columns):
-        dummy = pd.get_dummies(joined[f].astype('category'))
-        tmp = csr_matrix(dummy)
+        if joined[f].nunique() > 2:
+            dummy = pd.get_dummies(joined[f].astype('category'))
+            tmp = csr_matrix(dummy)
+        else:
+            tmp = csr_matrix(pd.factorize(joined[f], sort=True)[0]).T
+
         sparse_data.append(tmp)
 
     # joined['sum_of_cats_cont'] = (joined_t[cats_old] == 0).sum(axis=1)
@@ -313,7 +390,7 @@ def one_hot_categorical_sqrt(subtract_mean=False, quadratic=False):
     joined = joined.fillna(0)
 
     f_num = [f for f in joined.columns if 'cont' in f]
-    print len(f_num)
+
     scaler = StandardScaler()
     tmp = csr_matrix(scaler.fit_transform(joined[f_num]))
     sparse_data.append(tmp)
@@ -437,8 +514,12 @@ def fancy(shift=200, quadratic=False, truncate=False):
 
 
 def fancy_sqrt(quadratic=False, add_aggregates=False):
-    COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
-        ',')
+    COMB_FEATURE = ['cat80', 'cat79', 'cat12', 'cat57', 'cat87', 'cat81', 'cat53', 'cat1', 'cat44', 'cat26',
+                    'cat11', 'cat2', 'cat101', 'cat90', 'cat10', 'cat38', 'cat7', 'cat73', 'cat103', 'cat89',
+                    'cat25', 'cat111', 'cat72', 'cat114', 'cat39', 'cat31', 'cat82', 'cat75', 'cat77', 'cat36',
+                    'cat100', 'cat5', 'cat49', 'cat78', 'cat76', 'cat50', 'cat52', 'cat94', 'cat16']
+    # COMB_FEATURE = 'cat80,cat87,cat57,cat12,cat79,cat10,cat7,cat89,cat2,cat72,cat81,cat11,cat1,cat13,cat9,cat3,cat16,cat90,cat23,cat36,cat73,cat103,cat40,cat28,cat111,cat6,cat76,cat50,cat5,cat4,cat14,cat38,cat24,cat82,cat25'.split(
+    #     ',')
     train = pd.read_csv('../data/train.csv')
     print train.shape
 
@@ -457,15 +538,26 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 
     # joined, ntrain = mungeskewed(train, test, numeric_feats)
     joined = pd.concat([train, test])
+
+    cat_80_mean_mapping = train.groupby('cat80')['loss'].mean()
+    cat_80_std_mapping = train.groupby('cat80')['loss'].std()
+    cat_79_mean_mapping = train.groupby('cat79')['loss'].mean()
+    cat_79_std_mapping = train.groupby('cat79')['loss'].std()
+
+    joined['CAT80_mean'] = joined['cat80'].map(cat_80_mean_mapping)
+    joined['CAT80_std'] = joined['cat80'].map(cat_80_std_mapping)
+    joined['CAT79_mean'] = joined['cat79'].map(cat_79_mean_mapping)
+    joined['CAT79_std'] = joined['cat79'].map(cat_79_std_mapping)
+
     ntrain = train.shape[0]
 
     # Adding extra features
     joined['state'] = joined['cat112'].map(_get_state())
     joined['census_region'] = joined['state'].map(_get_census_region())
     joined['timezone'] = joined['state'].map(_get_timezone())
+    joined = joined.drop('state', 1)
 
     # joined['state'] = pd.factorize(joined['state'], sort=True)[0]
-    joined = joined.drop('state', 1)
     joined['census_region'] = pd.factorize(joined['census_region'], sort=True)[0]
     joined['timezone'] = pd.factorize(joined['timezone'], sort=True)[0]
 
@@ -476,6 +568,15 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     min_cont14 = min_cont14[min_cont14 > 0].min()
     joined['cont14'] = (joined['cont14'] / min_cont14).astype(int)
 
+    # cont14_mapping_up = dict(zip(sorted(joined['cont14'].unique())[:-1], sorted(joined['cont14'].unique())[1:]))
+    # cont14_mapping_dn = dict(zip(sorted(joined['cont14'].unique())[1:], sorted(joined['cont14'].unique())[:-1]))
+
+    # joined['cont14_up'] = joined['cont14'].map(cont14_mapping_up)
+    # joined['cont14_dn'] = joined['cont14'].map(cont14_mapping_dn)
+    #
+    # joined['cont14-up'] = joined['cont14'] - joined['cont14_up']
+    # joined['cont14-dn'] = joined['cont14'] - joined['cont14_dn']
+
     # joined['cont14_7'] = joined['cont14'] % 7
     # joined['cont14_365'] = joined['cont14'] % 365
     # joined['cont14_24'] = joined['cont14'] % 24
@@ -485,6 +586,17 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     min_cont7 = np.diff(joined['cont7'])
     min_cont7 = min_cont7[min_cont7 > 0].min()
     joined['cont7'] = (joined['cont7'] / min_cont7).astype(int)
+
+    cont7_mapping_up = dict(zip(sorted(joined['cont7'].unique())[:-1], sorted(joined['cont7'].unique())[1:]))
+    cont7_mapping_dn = dict(zip(sorted(joined['cont7'].unique())[1:], sorted(joined['cont7'].unique())[:-1]))
+
+    joined['cont7_up'] = joined['cont7'].map(cont7_mapping_up)
+    joined['cont7_dn'] = joined['cont7'].map(cont7_mapping_dn)
+
+    joined['cont14-cont7'] = joined['cont14'] - joined['cont7']
+
+    joined['cont7-up'] = joined['cont7'] - joined['cont7_up']
+    joined['cont7-dn'] = joined['cont7'] - joined['cont7_dn']
 
     # joined['cont7_7'] = joined['cont7'] % 7
     # joined['cont7_365'] = joined['cont7'] % 365
@@ -504,6 +616,16 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
 
             joined[feat] = joined[comb[0]] + joined[comb[1]]
             assert joined[feat].isnull().sum() == 0
+
+        # for comb in tqdm(list(itertools.combinations(COMB_FEATURE[:10], 3))):
+        #     feat = comb[0] + "_" + comb[1] + '_' + comb[2]
+        #     feat = feat.upper()
+        #
+        #     mapping = (pd.DataFrame(joined.groupby([comb[0], comb[1], comb[2]])['loss'].mean())
+        #                .reset_index().rename(columns={'loss': feat + '_loss'}))
+        #
+        #     joined = joined.merge(mapping, how='left', on=[comb[0], comb[1], comb[2]])
+        #     # assert joined[feat].isnull().sum() == 0
 
     train = joined.iloc[:ntrain, :]
     test = joined.iloc[ntrain:, :]
@@ -543,7 +665,11 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
             joined[column + '_min'] = joined_t[column].map(min_mapping)
 
     joined['sum_of_cats_0'] = (joined_t[cats_old] == 0).sum(axis=1)
-    joined['sum_of_cats_0_71'] = (joined_t[cats_old][0:71] == 0).sum(axis=1)
+    joined['sum_of_cats_1'] = (joined_t[cats_old] == 1).sum(axis=1)
+    joined['sum_of_cats_2'] = (joined_t[cats_old] == 2).sum(axis=1)
+    # joined['sum_of_cats_3'] = (joined_t[cats_old] == 3).sum(axis=1)
+    # joined['sum_of_cats_4'] = (joined_t[cats_old] == 4).sum(axis=1)
+    # joined['sum_of_cats_5'] = (joined_t[cats_old] == 5).sum(axis=1)
 
     joined = joined.fillna(0)
 
@@ -554,6 +680,7 @@ def fancy_sqrt(quadratic=False, add_aggregates=False):
     X_test = joined.iloc[ntrain:, :]
     y_train = np.sqrt(np.sqrt(X_train['loss'].values))
     y_mean = y_train.mean()
+    print X_train.head()
 
     return X_train.drop(['loss', 'id'], 1), y_train, X_test.drop(['loss', 'id'], 1), y_mean, X_test['id'], X_train['id']
 

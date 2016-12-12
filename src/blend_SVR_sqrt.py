@@ -118,6 +118,9 @@ lgbt_test_1 = pd.read_csv('oof/lgbt_test_1.csv').rename(columns={'loss': 'lgbt_l
 lgbm_train_s1 = pd.read_csv('oof/lgbm_train_s1.csv').rename(columns={'loss': 'lgbm_loss_s1'})
 lgbm_test_s1 = pd.read_csv('oof/lgbm_test_s1.csv').rename(columns={'loss': 'lgbm_loss_s1'})
 
+lgbm_train_s2 = pd.read_csv('oof/lgbm_train_s2.csv').rename(columns={'loss': 'lgbm_loss_s2'})
+lgbm_test_s2 = pd.read_csv('oof/lgbm_test_s2.csv').rename(columns={'loss': 'lgbm_loss_s2'})
+
 et_train_1 = pd.read_csv('oof/et_train.csv').rename(columns={'loss': 'et_loss'})
 et_test_1 = pd.read_csv('oof/et_test.csv').rename(columns={'loss': 'et_loss'})
 
@@ -178,6 +181,7 @@ X_train = (train[['id', 'loss']]
             .merge(nn_train_6, on='id')
             .merge(lgbt_train_1, on='id')
            .merge(lgbm_train_s1, on='id')
+            .merge(lgbm_train_s2, on='id')
            .merge(et_train_1, on='id')
            .merge(et_train_s1, on='id')
             .merge(et_train_s2, on='id')
@@ -221,6 +225,7 @@ X_test = (test[['id', 'cat1']]
           .merge(nn_test_6, on='id')
           .merge(lgbt_test_1, on='id')
           .merge(lgbm_test_s1, on='id')
+          .merge(lgbm_test_s2, on='id')
           .merge(et_test_1, on='id')
           .merge(et_test_s1, on='id')
           .merge(et_test_s2, on='id')
@@ -241,12 +246,12 @@ X_test_id = X_test['id'].values
 X_train = X_train.drop(['id', 'loss'], 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 X_test = X_test.drop('id', 1).applymap(lambda x: np.sqrt(np.sqrt(x))).values
 
-scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+# scaler = StandardScaler()
+# X_train = scaler.fit_transform(X_train)
+# X_test = scaler.transform(X_test)
 
-X_test = np.hstack([X_test, nn_class_test.drop('id', 1).values])
-X_train = np.hstack([X_train, nn_class_train.drop('id', 1).values])
+# X_test = np.hstack([X_test, nn_class_test.drop('id', 1).values])
+# X_train = np.hstack([X_train, nn_class_train.drop('id', 1).values])
 
 test_ids = test['id']
 
@@ -254,23 +259,23 @@ num_rounds = 300000
 RANDOM_STATE = 2016
 
 
-parameters = {'C': np.logspace(-3, -2, 10)}
+parameters = {'C': np.logspace(-3, -2, 5)}
 
 n_folds = 10
 
 kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
 classes = clean_data.classes(y_train, bins=100)
 
-# svr = LinearSVR(random_state=RANDOM_STATE)
-#
-#
-# clf = GridSearchCV(svr, parameters, n_jobs=-1, cv=kf.get_n_splits(classes, classes), scoring=make_scorer(eval_f),
-#                    iid=False, verbose=2)
-#
-# clf.fit(X_train, y_train)
-#
-# for i in clf.grid_scores_:
-#     print i
+svr = LinearSVR(random_state=RANDOM_STATE)
+
+
+clf = GridSearchCV(svr, parameters, n_jobs=-1, cv=kf.get_n_splits(classes, classes), scoring=make_scorer(eval_f),
+                   iid=False, verbose=2)
+
+clf.fit(X_train, y_train)
+
+for i in clf.grid_scores_:
+    print i
 
 num_train = X_train.shape[0]
 num_test = X_test.shape[0]
@@ -310,7 +315,7 @@ def get_oof(clf):
 
     return pred_oob, pred_test
 
-svr = LinearSVR(C=0.0046415888336127772)
+svr = LinearSVR(C=0.0035938136638046258)
 # svr = Ridge()
 
 svr_oof_train, svr_oof_test = get_oof(svr)
@@ -318,10 +323,10 @@ svr_oof_train, svr_oof_test = get_oof(svr)
 print("SVR-CV: {}".format(mean_absolute_error(y_train**4, svr_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': svr_oof_train})
-oof_train.to_csv('oof2/svr_train_sqrt_3.csv', index=False)
+oof_train.to_csv('oof2/svr_train_sqrt_6.csv', index=False)
 
 svr_oof_test /= n_folds
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': svr_oof_test})
-oof_test.to_csv('oof2/svr_test_sqrt_3.csv', index=False)
+oof_test.to_csv('oof2/svr_test_sqrt_6.csv', index=False)
 

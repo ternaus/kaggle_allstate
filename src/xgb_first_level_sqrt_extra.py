@@ -33,7 +33,7 @@ def evalerror(preds, dtrain):
     return 'mae', mean_absolute_error(preds**4, labels**4)
 
 
-X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=False)
+X_train, y_train, X_test, y_mean, X_test_id, X_train_id = clean_data.fancy_sqrt(quadratic=True)
 
 X_train = X_train.values
 X_test = X_test.values
@@ -50,7 +50,7 @@ RANDOM_STATE = 2016
 xgb_params = {
     'min_child_weight': 100,
     'eta': 0.01,
-    'colsample_bytree': 0.5,
+    'colsample_bytree': 0.4,
     'max_depth': 13,
     'subsample': 0.8,
     # 'alpha': 5,
@@ -128,10 +128,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("XG-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/xgb_train_s7.csv', index=False)
+oof_train.to_csv('oof/xgb_train_s8.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/xgb_test_s7.csv', index=False)
+oof_test.to_csv('oof/xgb_test_s8.csv', index=False)
 

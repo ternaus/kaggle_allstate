@@ -81,7 +81,7 @@ class lgbmWrapper(object):
         return self.model.predict(x, num_iteration=self.model.best_iteration)
 
 
-nbags = 2
+nbags = 5
 
 
 def get_oof(clf):
@@ -119,10 +119,10 @@ xg_oof_train, xg_oof_test = get_oof(xg)
 print("lgbm-CV: {}".format(mean_absolute_error(y_train**4, xg_oof_train)))
 
 oof_train = pd.DataFrame({'id': X_train_id, 'loss': xg_oof_train})
-oof_train.to_csv('oof/lgbm_train_s1.csv', index=False)
+oof_train.to_csv('oof/lgbm_train_s2.csv', index=False)
 
 xg_oof_test /= (n_folds * nbags)
 
 oof_test = pd.DataFrame({'id': X_test_id, 'loss': xg_oof_test})
-oof_test.to_csv('oof/lgbm_test_s1.csv', index=False)
+oof_test.to_csv('oof/lgbm_test_s2.csv', index=False)
 
