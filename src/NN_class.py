@@ -63,9 +63,9 @@ test['loss'] = np.nan
 # response and IDs
 shift = 200
 y = np.log(train['loss'].values + shift)
-# y = train['loss'].values
-# y_mean = y.mean()
-# y = y - y_mean
+# y_train = train['loss'].values
+# y_mean = y_train.mean()
+# y_train = y_train - y_mean
 
 num_classes = 20
 
@@ -138,12 +138,12 @@ RANDOM_STATE = 2016
 def nn_model():
     inputs = Input(shape=(xtrain.shape[1], ))
     # x = Dropout(0.5)(inputs)
-    x = Dense(400, init='he_normal', activation='elu', name='l1')(inputs)
+    x = Dense(1024, init='he_normal', activation='elu', name='l1')(inputs)
+    x = Dropout(0.5)(x)
     x = BatchNormalization()(x)
+    x = Dense(1024, init='he_normal', activation='elu', name='l2')(x)
     x = Dropout(0.5)(x)
-    x = Dense(400, init='he_normal', activation='elu', name='l2')(x)
-    # x = BatchNormalization()(x)
-    x = Dropout(0.5)(x)
+    x = BatchNormalization()(x)
     x = Dense(400, init='he_normal', activation='elu', name='l3')(x)
     x = Dropout(0.5)(x)
     x = Dense(num_classes, activation='softmax', name='output')(x)
@@ -193,9 +193,9 @@ fit = model.fit_generator(generator=batch_generator(X_train, y_train, 256, True)
 #
 #
 #     X_train = X_train[train_index]
-#     y_train = y[train_index]
+#     y_train = y_train[train_index]
 #     X_val = X_train[test_index]
-#     y_val = y[test_index]
+#     y_val = y_train[test_index]
 #     pred_val = np.zeros(X_val.shape[0])
 #     for j in range(nbags):
 #         model = nn_model()
@@ -210,7 +210,7 @@ fit = model.fit_generator(generator=batch_generator(X_train, y_train, 256, True)
 #     i += 1
 #     print('Fold ', i, '- MAE:', score)
 #
-# print('Total - MAE:', mean_absolute_error(y, pred_oob))
+# print('Total - MAE:', mean_absolute_error(y_train, pred_oob))
 #
 # ## train predictions
 # df = pd.DataFrame({'id': id_train, 'loss': np.exp(pred_oob + y_mean)})

@@ -65,7 +65,7 @@ test['loss'] = np.nan
 # response and IDs
 shift = 200
 y = np.log(train['loss'].values + shift)
-# y = train['loss'].values
+# y_train = train['loss'].values
 
 y_mean = y.mean()
 
@@ -91,7 +91,7 @@ joined = pd.concat((train, test), axis=0)
 # joined['cont12'] = joined['cont12'].astype(str)
 # joined['cont13'] = joined['cont13'].astype(str)
 
-joined = joined.drop(['cat110', 'cat116'], 1)
+# joined = joined.drop(['cat110', 'cat116'], 1)
 
 cat_columns = joined.select_dtypes(include=['object']).columns
 
@@ -146,66 +146,16 @@ del(xtr_te, sparse_data, tmp)
 
 RANDOM_STATE = 2016
 
-# def nn_model():
-#     model = Sequential()
-#     model.add(Dense(400, init='he_normal', activation='elu', input_dim=xtrain.shape[1]))
-#     model.add(Dropout(0.5))
-#     # model.add(BatchNormalization())
-#     model.add(Dense(500, init='he_normal', activation='elu'))
-#     model.add(Dropout(0.5))
-#     # model.add(BatchNormalization())
-#     # model.add(Dense(500, init='he_normal', activation='elu'))
-#     # model.add(Dropout(0.5))
-#     model.add(Dense(1))
-#     # model.compile(loss='mae', optimizer='nadam')
-#     return(model)
-#
-# # neural net
 def nn_model():
-    inputs = Input(shape=(xtrain.shape[1], ))
-    l1 = Dense(700, init='he_uniform', activation='elu', name='l1')(inputs)
-    x = Dropout(0.4)(l1)
-    l2 = Dense(500, init='he_uniform', activation='elu', name='l2')(x)
-    x = Dropout(0.4)(l2)
-    x = merge([l1, x], mode='concat')
-    x = BatchNormalization()(x)
-    l3 = Dense(300, init='he_normal', activation='elu', name='l3')(x)
-    x = Dropout(0.4)(l3)
-    # x = Dropout(0.5)(x)
-    x = merge([l2, x], mode='concat')
-    x = BatchNormalization()(x)
-    l4 = Dense(50, init='he_normal', activation='elu', name='l4')(x)
-    # x = Dropout(0.5)(l4)
-    # x = Dense(1, name='output')(x)
-    x = Dense(1, name='output')(l4)
-    model = Model(input=inputs, output=x)
-
+    model = Sequential()
+    model.add(Dense(400, input_dim = xtrain.shape[1], init='he_normal', activation='elu'))
+    model.add(Dropout(0.4))
+    model.add(Dense(200, init='he_normal', activation='elu'))
+    model.add(Dropout(0.4))
+    model.add(Dense(100, init='he_normal', activation='elu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(1, init='he_normal'))
     return model
-
-# def nn_model():
-#     model = Sequential()
-#     model.add(MaxoutDense(500, 4, init='he_uniform', input_shape=(X_train.shape[1], )))
-#     model.add(Dropout(0.5))
-#     model.add(MaxoutDense(500, 4, init='he_uniform'))
-#     model.add(Dropout(0.5))
-#     model.add(Dense(1))
-#     return model
-
-# def nn_model():
-#     model = Sequential()
-#     model.add(GaussianNoise(1, input_shape=(X_train.shape[1], )))
-#     model.add(Dense(500, init='he_uniform', activation='elu'))
-#     model.add(Dropout(0.5))
-#     model.add(Dense(500, init='he_uniform', activation='elu'))
-#     model.add(Dropout(0.5))
-#     model.add(Dense(1))
-#     return model
-
-
-
-sss = ShuffleSplit(n_splits=10, test_size=0.2, random_state=RANDOM_STATE)
-
-train_index, test_index = sss.split(xtrain, y).next()
 
 X_train = xtrain[train_index]
 y_train = y[train_index]

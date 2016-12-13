@@ -151,8 +151,8 @@ def nn_model():
     model.add(Dense(400, init='he_normal', activation='elu', input_dim=X_train.shape[1]))
     model.add(Dropout(0.4))
     model.add(Dense(200, init='he_normal', activation='elu'))
-    model.add(Dropout(0.4))
-    model.add(Dense(50, init='he_normal', activation='elu'))
+    # model.add(Dropout(0.4))
+    # model.add(Dense(50, init='he_normal', activation='elu'))
     model.add(Dropout(0.2))
     model.add(Dense(1))
     return model

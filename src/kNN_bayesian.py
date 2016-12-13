@@ -23,8 +23,9 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import make_scorer
 from pylab import *
 from sklearn.preprocessing import StandardScaler
-
+from scipy.sparse import csr_matrix, hstack
 from sklearn.neighbors import KNeighborsRegressor
+import clean_data
 
 
 RANDOM_STATE = 2016
@@ -45,31 +46,6 @@ def knn_evaluate(n_neighbors, p):
     return -cross_val_score(knn, X_train, y_train, cv=kf, scoring=make_scorer(evalerror)).mean()
 
 
-def prepare_data():
-    train = pd.read_csv('../data/train.csv')
-    test = pd.read_csv('../data/test.csv')
-    test['loss'] = np.nan
-    joined = pd.concat([train, test])
-
-    num_columns = [x for x in train.columns if 'cont' in x]
-    print len(num_columns)
-
-    for column in num_columns:
-        scaler = StandardScaler()
-        joined[column] = scaler.fit_transform(joined[column])
-
-    train = joined[joined['loss'].notnull()].reset_index(drop=True)
-    test = joined[joined['loss'].isnull()]
-
-    shift = 200
-
-    ids = test['id']
-    X_train = train[num_columns].values
-    X_test = test[num_columns].values
-    y_train = np.log(train['loss'] + shift).values
-
-    return X_train, y_train
-
 if __name__ == '__main__':
     num_rounds = 10000
     random_state = 2016
@@ -77,11 +53,12 @@ if __name__ == '__main__':
     init_points = 10
     shift = 0
 
-    X_train, y_train = prepare_data()
+    X_train, y_train, _, _ = clean_data.oof_categorical(scale=True)
+    print X_train.shape, y_train.shape
 
     # previous_points = pd.read_csv('params/parameters.csv')
 
-    knnBO = BayesianOptimization(knn_evaluate, {'n_neighbors': (2, 500),
+    knnBO = BayesianOptimization(knn_evaluate, {'n_neighbors': (2, 10),
                                                 'p': (1, 10)
                                                 })
 

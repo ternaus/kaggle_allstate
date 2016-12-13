@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/vladimir/workspace/kaggle_allstate/src/calibration/main.cpp
+cmath
+-
+string.h
+-
+iostream
+-
+iomanip
+-
+deque
+-
+vector
+-
+map
+-
+algorithm
+-
+fstream
+-
+

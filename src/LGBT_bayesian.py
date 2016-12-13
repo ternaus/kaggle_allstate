@@ -45,7 +45,7 @@ def lgbt_evaluate(num_leaves, min_data_in_leaf, feature_fraction, bagging_fracti
         learning_rate=0.01,
         num_leaves=int(round(num_leaves)),
         # tree_learner='serial',
-        num_threads=4,
+        num_threads=8,
         min_data_in_leaf=int(round(min_data_in_leaf)),
         metric='l1',
         feature_fraction=max(feature_fraction, 0),
@@ -64,11 +64,11 @@ def lgbt_evaluate(num_leaves, min_data_in_leaf, feature_fraction, bagging_fracti
 
 
 if __name__ == '__main__':
-    num_rounds = 1000
+    num_rounds = 10000
     random_state = 2016
     num_iter = 500
-    init_points = 10
-    shift = 200
+    init_points = 10000
+    shift = 350
 
     X_train, y_train, _, _, _, _ = clean_data.fancy(shift=200)
     # X_train, y_train, _, _, _, _ = clean_data.one_hot_categorical(shift)
@@ -76,14 +76,14 @@ if __name__ == '__main__':
 
     previous_points = pd.read_csv('params/lgbt_params.csv')
 
-    lgbtBO = BayesianOptimization(lgbt_evaluate, {'num_leaves': (100, 300),
+    lgbtBO = BayesianOptimization(lgbt_evaluate, {'num_leaves': (10, 300),
                                                   'min_data_in_leaf': (4, 20),
-                                                  'feature_fraction': (0.2, 1),
-                                                  'bagging_fraction': (0.9, 1),
+                                                  'feature_fraction': (0.1, 1),
+                                                  'bagging_fraction': (0.8, 1),
                                                   # 'bagging_freq': (90, 110)
                                                 })
 
-    lgbtBO.initialize_df(previous_points)
+    # lgbtBO.initialize_df(previous_points)
 
     lgbtBO.maximize(init_points=init_points, n_iter=num_iter)
 
@@ -94,5 +94,5 @@ if __name__ == '__main__':
     except:
         pass
 
-    file_name = 'params/lgbt_params_1.csv'
+    file_name = 'params/lgbt_params_2.csv'
     lgbtBO.points_to_csv(file_name)

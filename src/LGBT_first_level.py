@@ -2,7 +2,7 @@ from __future__ import division
 import pandas as pd
 
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 import clean_data
 from pylab import *
 from sklearn.utils import shuffle
@@ -19,11 +19,13 @@ y_train = y_train.values
 num_rounds = 300000
 RANDOM_STATE = 2016
 
-n_folds = 5
+n_folds = 10
 num_train = X_train.shape
 num_test = X_test.shape[0]
 
-kf = KFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
+kf = StratifiedKFold(n_folds, shuffle=True, random_state=RANDOM_STATE)
+
+classes = clean_data.classes(y_train, bins=100)
 
 
 class SklearnWrapper(object):
@@ -45,7 +47,7 @@ def get_oof():
     pred_oob = np.zeros(X_train.shape[0])
     pred_test = np.zeros(X_test.shape[0])
 
-    for i, (train_index, test_index) in enumerate(kf.split(X_train)):
+    for i, (train_index, test_index) in enumerate(kf.split(classes, classes)):
         print "Fold = ", i
         x_tr = X_train[train_index]
         y_tr = y_train[train_index]
@@ -63,13 +65,13 @@ def get_oof():
                 'application': 'regression',
                 'num_iterations': 3000,
                 'learning_rate': 0.01,
-                'num_leaves': 213,
+                'num_leaves': 202,
                 'num_threads': 8,
-                'min_data_in_leaf': 4,
+                'min_data_in_leaf': 9,
                 'metric': 'l1',
-                'feature_fraction': 0.2933,
+                'feature_fraction': 0.3149,
                 'feature_fraction_seed': 2016 + i + j,
-                'bagging_fraction': 0.9804,
+                'bagging_fraction': 1,
                 'bagging_freq': 100,
                 'bagging_seed': 2016 + i + j,
                 'early_stopping_round': 25,
